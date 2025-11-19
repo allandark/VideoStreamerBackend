@@ -5,6 +5,12 @@ services:
       - "10000:5000"
     volumes:
       - Media:/var/media
+      - ./db_root_password.txt:/run/secrets/db_root_password:ro
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3307
+      MYSQL_DATABASE: video_streamer
     networks: 
       - backend
 
