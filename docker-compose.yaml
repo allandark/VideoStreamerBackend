@@ -1,0 +1,28 @@
+services:
+  rest-api:
+    build: ./RestAPI    
+    ports:
+      - "10000:5000"
+    volumes:
+      - Media:/var/media
+    networks: 
+      - backend
+
+  sql-database:
+    image: mysql
+    restart: always
+    volumes:
+      - ./db_root_password.txt:/run/secrets/db_root_password:ro
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_DATABASE: video_streamer
+    ports:
+      - "3307:3306"
+    networks: 
+      - backend
+
+volumes:
+  Media: {}
+
+networks: 
+  backend:
