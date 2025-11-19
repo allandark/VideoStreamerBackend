@@ -2,7 +2,7 @@ services:
   rest-api:
     build: ./RestAPI    
     ports:
-      - "10000:5000"
+      - "5000:5000"
     volumes:
       - Media:/var/media
       - ./db_root_password.txt:/run/secrets/db_root_password:ro
