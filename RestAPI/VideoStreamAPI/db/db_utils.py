@@ -1,4 +1,4 @@
-from datetime import datetime, date
+import datetime
 from logging import Logger
 import logging
 logger : Logger = logging.getLogger("app")
@@ -14,8 +14,10 @@ def model_to_dict(obj, include_relationships=False, session=None, visited=None):
     result = {}
     for c in obj.__table__.columns:
         val = getattr(obj, c.key)
-        if isinstance(val, datetime):
-            val = val.isoformat()  
+        # if isinstance(val, datetime.date):
+        #     val = val.isoformat() 
+        # if isinstance(val, datetime.datetime):
+        #     val = val.isoformat()   
         result[c.key] = val
 
     # Relationships
@@ -35,7 +37,7 @@ def model_to_dict(obj, include_relationships=False, session=None, visited=None):
 
     return result
 
-def from_dict(obj, data: dict, session, visited=None):
+def from_dict(obj, data: dict, session, visited=None, include_relationships=True):
 
     if visited is None:
         visited = set()
@@ -43,60 +45,61 @@ def from_dict(obj, data: dict, session, visited=None):
         return obj
     visited.add(id(obj))
 
-    for col in obj.__table__.columns:
+    for col in obj.__table__.columns:    
         if col.key in data:  
             value = data[col.key]          
             if hasattr(col.type, "python_type"):
                 py_type = col.type.python_type
-                if py_type is datetime:
+                if py_type is datetime.datetime:
                     if isinstance(value, str):
-                        value = datetime.fromisoformat(value)
-                elif py_type is date:
+                        value = datetime.datetime.fromisoformat(value)
+                elif py_type is datetime.date:
                     if isinstance(value, str):
-                        value = datetime.fromisoformat(value).date() 
+                        value = datetime.date.fromisoformat(value)
             setattr(obj, col.key, value)
 
-    for rel in obj.__mapper__.relationships:
-        if rel.key not in data:
-            continue
-        val = data[rel.key]
-        related_cls = rel.mapper.class_
+    if include_relationships:
+        for rel in obj.__mapper__.relationships:
+            if rel.key not in data:
+                continue
+            val = data[rel.key]
+            related_cls = rel.mapper.class_
 
-        if rel.uselist:
-            # Many-to-many or one-to-many
-            if isinstance(val, list):
-                related_objs = []
-                for item in val:
-                    if isinstance(item, dict):
-                        # nested object, recursively create/update
-                        existing = None
-                        if "id" in item:
-                            existing = session.get(related_cls, item["id"])
-                        related_obj = from_dict(existing or related_cls(), item, session, visited)
-                        session.add(related_obj)
-                        related_objs.append(related_obj)
-                    else:
-                        # assume item is ID
-                        related_obj = session.get(related_cls, item)
-                        if related_obj:
+            if rel.uselist:
+                # Many-to-many or one-to-many
+                if isinstance(val, list):
+                    related_objs = []
+                    for item in val:
+                        if isinstance(item, dict):
+                            # nested object, recursively create/update
+                            existing = None
+                            if "id" in item:
+                                existing = session.get(related_cls, item["id"])
+                            related_obj = from_dict(existing or related_cls(), item, session, visited)
+                            session.add(related_obj)
                             related_objs.append(related_obj)
-                setattr(obj, rel.key, related_objs)
-        else:
-            # One-to-one or many-to-one
-            if isinstance(val, dict):
-                existing = None
-                if "id" in val:
-                    existing = session.get(related_cls, val["id"])
-                related_obj = from_dict(existing or related_cls(), val, session, visited)
-                session.add(related_obj)
-                setattr(obj, rel.key, related_obj)
+                        else:
+                            # assume item is ID
+                            related_obj = session.get(related_cls, item)
+                            if related_obj:
+                                related_objs.append(related_obj)
+                    setattr(obj, rel.key, related_objs)
             else:
-                 # val could be None or an ID
-                if val is not None:
-                    related_obj = session.get(related_cls, val)
+                # One-to-one or many-to-one
+                if isinstance(val, dict):
+                    existing = None
+                    if "id" in val:
+                        existing = session.get(related_cls, val["id"])
+                    related_obj = from_dict(existing or related_cls(), val, session, visited)
+                    session.add(related_obj)
                     setattr(obj, rel.key, related_obj)
                 else:
-                    # clear the relationship if None
-                    setattr(obj, rel.key, None)
+                    # val could be None or an ID
+                    if val is not None:
+                        related_obj = session.get(related_cls, val)
+                        setattr(obj, rel.key, related_obj)
+                    else:
+                        # clear the relationship if None
+                        setattr(obj, rel.key, None)
 
     return obj

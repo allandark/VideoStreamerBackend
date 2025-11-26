@@ -6,6 +6,8 @@ import ffmpeg
 from pathlib import Path
 import subprocess
 import shutil
+from .upload_manager import UploadManager
+from .video_manager import VideoManager
 
 
 class MediaManager:
@@ -15,6 +17,9 @@ class MediaManager:
         self.output_dir = Path(abs_video_dir) / "videos"
         self.upload_dir = Path(abs_video_dir) / "uploads"
 
+        self.uploader = UploadManager(self.upload_dir)
+        self.video_manager = VideoManager(self.output_dir, self.upload_dir)
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
@@ -23,15 +28,21 @@ class MediaManager:
 
 
     def video_get_metadata(self, input_file: str):
-        input_path = self.upload_dir / input_file
+        input_path = self.upload_dir / f"{input_file}.mp4"
         try:
             metadata = ffmpeg.probe(input_path)
             logger.debug(f"Metadata found")
             return metadata
+        
+        except ffmpeg.Error as e:            
+            logger.error(f"ffmpeg error: {e.stdout.decode('utf-8')}")   
+            logger.error(f"ffmpeg error: {e.stderr.decode('utf-8')}")            
+            return None
         except Exception as e:
             logger.error(f"Metadata error: {e}")
             return None
-
+        
+        
     def video_generate_hls_variants(self, video_name: str):
 
         variants = [
@@ -115,61 +126,29 @@ class MediaManager:
             logger.error(f"{e}")
  
 
-
     def video_get_file(self, video_dir,  file = "master.m3u8"):
         return self.output_dir / video_dir / file
 
-    def video_get_all(self):
-        video_names = []
-        for entry in os.listdir(self.output_dir):
-            video_names.append({"name": entry, "type":".m3u8"})
-        return video_names
 
-    def video_file_exists(self, video_dir , file = "master.m3u8"):
-        url = self.output_dir / video_dir / file
-        return os.path.exists(url)
-
-    def video_remove(self, video_dir):
-        try:
-            shutil.rmtree(self.output_dir / video_dir)      
-            logger.info(f"HLS files deleted successfully")      
-            return True
-        except Exception as e: 
-            logger.error(f"Failed to delete HLS files")
-            return False      
+    # def video_get_all(self):
+    #     video_names = []
+    #     for entry in os.listdir(self.output_dir):
+    #         video_names.append({"name": entry, "type":".m3u8"})
+    #     return video_names
 
 
-    def upload_get_all(self):
-        upload_dicts =[]
-        for entry in os.listdir(self.upload_dir):
-            ls = entry.split(".")
-            upload_dicts.append( {"name": ls[0], "type": ls[1]})
-        return upload_dicts
-    
-    def upload_get_file(self, video_dir):
-        return self.upload_dir / f"{video_dir}.mp4"
+    # def video_file_exists(self, video_dir , file = "master.m3u8"):
+    #     url = self.output_dir / video_dir / file
+    #     return os.path.exists(url)
 
-    def upload_file_exists(self, video_dir ):
-        url = self.upload_dir / f"{video_dir}.mp4"
-        return os.path.exists(url)
 
-    def upload_remove(self, video_dir):
-        try:
-            path = self.upload_dir / f"{video_dir}.mp4"
-            os.remove(path)
-            logger.info(f"File deleted successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to delete: {e}")
-            return False
+    # def video_remove(self, video_dir):
+    #     try:
+    #         shutil.rmtree(self.output_dir / video_dir)      
+    #         logger.info(f"HLS files deleted successfully")      
+    #         return True
+    #     except Exception as e: 
+    #         logger.error(f"Failed to delete HLS files")
+    #         return False      
 
-    def upload_save(self, file, filename):
-        try:                 
-            save_path = self.upload_dir / f"{filename}.mp4"
-            file.save(save_path)
-            logger.info(f"File added to upload: {save_path}")
-            return True
-        except Exception as e:
-            logger.warning(f"File failed to be added: {e}")
-            return False
- 
+

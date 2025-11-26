@@ -3,7 +3,7 @@ from flask_cors import CORS
 
 from api import create_api, jwt
 from core.custom_formatter import CustomFormatter, InitLogger
-from core.media_file_writer import MediaManager
+from core.media_manager import MediaManager
 from db.db_context import DatabaseContext
 from dataclasses import dataclass
 import os
@@ -11,6 +11,9 @@ import os
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
+
+
+from core.upload_manager import UploadManager
 
 @dataclass
 class AppContext:
@@ -24,24 +27,19 @@ class AppContext:
 def create_app():
     
     app = Flask(__name__)
-    CORS(app)
+    CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://localhost:8081"])
     InitLogger(app)
     logger.info("Initializing server ...")
 
-    # mdata = get_metadata("testfiles/video1.mp4")
-    # generate_hls_variants(
-    #     video_name="tennis_vid",
-    #     input_file="testfiles/video1.mp4",
-    #     output_dir="testfiles/out",
-    #     host="127.0.0.1",
-    #     port=5000        
-    # )
 
-    db_context = DatabaseContext(create_tables=False, seed=False)
+    db_context = DatabaseContext(create_tables=True, seed=False)
+    
+    # TEMP
     abs_path = f"{os.getcwd()}/testfiles"
     media_manager = MediaManager(abs_video_dir=abs_path)
 
-    # media_manager.video_generate_hls_variants(video_name="tennis_vid", input_file= "tennis_vid.mp4")
+    # END TEMP
+
 
     app_context = AppContext(
         db_context = db_context,

@@ -1,6 +1,6 @@
 from sqlalchemy import ForeignKey, Table, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
-from sqlalchemy.types import String, Date
+from sqlalchemy.types import String, Date, DateTime
 from typing import List
 
 import logging
@@ -46,13 +46,16 @@ class VideoMetaDataModel(Base):
   title: Mapped[String] = mapped_column(String(256))
   file_path: Mapped[String] = mapped_column(String(256))
   language: Mapped[String] = mapped_column(String(256))
+  description: Mapped[String] = mapped_column(String(512))
   duration_seconds: Mapped[int] 
   screen_width: Mapped[int] 
   screen_height: Mapped[int] 
   rating: Mapped[float] 
-  upload_date: Mapped[Date] = mapped_column(Date())
-  
+  upload_date: Mapped[DateTime] = mapped_column(DateTime())
+  media_id: Mapped[int] = mapped_column(ForeignKey("MEDIA_META_DATA.id"), unique=True)
   # Relationships
+  
+  media: Mapped["MediaMetaDataModel"] = relationship(back_populates="video")
   subtitles: Mapped[List["SubtitlesModel"]] = relationship(back_populates="video")
   stars: Mapped[List["StarModel"]] = relationship(
       secondary=video_star_table, 
@@ -183,10 +186,27 @@ class UserModel(Base):
   hashed_password: Mapped[String] = mapped_column(String(256))
   email: Mapped[String] = mapped_column(String(256))
   user_type: Mapped[String] = mapped_column(String(256))
-  creation_date: Mapped[Date] = mapped_column(Date())
+  creation_date: Mapped[DateTime] = mapped_column(DateTime())
 
   def __repr__(self) -> str:
     return "".join((f"UserModel(id={self.id!r}, user_name={self.user_name!r}, ",
             f", email={self.email!r}, user_type={self.user_type!r}, creation_date={self.creation_date!r}",
             f")"))
   
+
+
+class MediaMetaDataModel(Base):
+  __tablename__ = "MEDIA_META_DATA"
+
+  id: Mapped[int] = mapped_column(primary_key=True)
+
+
+  video: Mapped["VideoMetaDataModel"] = relationship(
+        back_populates="media",
+        uselist=False
+    )
+
+
+  hash: Mapped[String] = mapped_column(String(64))
+  name: Mapped[String] = mapped_column(String(256))
+  mimetype: Mapped[String] = mapped_column(String(64))

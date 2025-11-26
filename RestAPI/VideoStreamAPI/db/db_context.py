@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.engine import URL
 from .models import Base, UserModel, VideoMetaDataModel, SubtitlesModel
-from .models import GenreModel, StarModel, SeriesModel, DirectorModel
+from .models import GenreModel, StarModel, SeriesModel, DirectorModel, MediaMetaDataModel
 from .services.crud import CrudService
 import os
 
@@ -57,6 +57,7 @@ class DatabaseContext:
         self.series = CrudService(self.db_session, SeriesModel)
         self.genres = CrudService(self.db_session, GenreModel)
         self.subtitles = CrudService(self.db_session, SubtitlesModel)
+        self.media = CrudService(self.db_session, MediaMetaDataModel)
 
         if create_tables:
             self.CreateTables()
@@ -78,7 +79,7 @@ class DatabaseContext:
                 user = UserModel()
                 user.email = "john@doe.dk"
                 user.hashed_password = "1234"
-                user.creation_date = datetime.datetime.now().isoformat()
+                user.creation_date = datetime.datetime.now()
                 user.user_type = "admin"      
                 user.user_name = "john"          
                 session.add(user)
@@ -101,7 +102,7 @@ class DatabaseContext:
                 video.screen_height = 0
                 video.screen_width = 0
                 video.rating = 0.5
-                video.upload_date = datetime.datetime.now().isoformat()
+                video.upload_date = datetime.datetime.now()
                 video.title = "Some movie title"
                 session.add(video)
 
