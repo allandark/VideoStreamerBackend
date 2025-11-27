@@ -1,4 +1,6 @@
 from ..db_utils import model_to_dict, from_dict
+from ..models import GenreModel
+from sqlalchemy.orm import joinedload
 
 import logging
 logger : logging.Logger = logging.getLogger("app")
@@ -11,18 +13,20 @@ class CrudService:
     def GetAll(self, args = None):
         with self.session_factory() as session:
             try:
-                # rows= []
-                # if args is not None:
+                rows= []
+                if args is None: 
+                    rows = session.query(self.model).all()
 
-                #     pass
-                #     # rows = session.query(self.model.genres.in_(args['genre']))
-                # else:
-                rows = session.query(self.model).all()
-                # else:
-                #     # TODO: test
-                #     # Filtering ops
-                #     if args['genre']:
-                        
+                elif args['genre'] is None and args['search'] is None:
+                    rows = session.query(self.model).all()
+                else:
+                    if args['genre']:
+                        rows = (session.query(self.model)                            
+                            .filter(self.model.genres.any(GenreModel.name.in_( args['genre'])))
+                            .all()
+                            )
+                    if args['search']:
+                        rows = session.query(self.model).filter(self.model.title.startswith(args['search'])).all()
                 #     if args['series']:
                 #         rows = session.query(self.model.series.in_(args['series']))
                 #     if args['star']:

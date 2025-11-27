@@ -156,6 +156,7 @@ def get_video_request_parser(api):
     request_parser.add_argument("series", type=str)
     request_parser.add_argument("star", type=str, action='split')
     request_parser.add_argument("director", type=str, action='split')
+    request_parser.add_argument("search", type=str)
 
     request_parser.add_argument("sort_by",type=str, choices=["genre", "star", "director", "title", "duration_seconds", "upload_date", "language"])
     request_parser.add_argument("order", type=str, choices=["asc","desc"], default = "asc" )

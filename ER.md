@@ -5,7 +5,7 @@
 ```mermaid
 erDiagram
 
-    VIDEO_META_DATA ||--o{ SUBTITLE : has
+    VIDEO_META_DATA ||--|| MEDIA_META_DATA : has
 
 
     VIDEO_STAR ||--o{ STAR : features
@@ -22,6 +22,7 @@ erDiagram
 
     VIDEO_META_DATA{
         int id PK
+        int media_id FK
         string title
         string file_path
         string langauge
@@ -31,6 +32,15 @@ erDiagram
         float rating
         date upload_date
     }
+
+    MEDIA_META_DATA{
+        int id PK
+        int video_id FK
+        string name
+        string hash  
+        string mimetype
+    }
+
 
     DIRECTOR{
         int id PK
@@ -55,12 +65,6 @@ erDiagram
         string name  
     }
 
-    SUBTITLE{
-        int id PK
-        int media_id FK
-        string name
-        string file_path  
-    }
 
     VIDEO_DIRECTOR{
         int video_id FK
