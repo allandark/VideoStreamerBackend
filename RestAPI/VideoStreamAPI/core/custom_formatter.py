@@ -31,8 +31,10 @@ def InitLogger(app):
     gunicorn_access.addHandler(ch1)
     gunicorn_access.addHandler(ch2)
     gunicorn_access.setLevel(logging.DEBUG)
-
     
+    logging.getLogger().handlers = gunicorn_error.handlers
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().propagate = True
 
 class CustomFormatter(logging.Formatter):
     

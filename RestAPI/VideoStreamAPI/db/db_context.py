@@ -66,7 +66,7 @@ class DatabaseContext:
 
     def CreateTables(self):
         try:
-            self.metadata_obj.create_all(self.engine)
+            self.metadata_obj.create_all(self.engine, checkfirst=True)
             logger.debug("Tables created")
         except Exception as e:
             logger.error(f"CreateTables failed: {e}")
