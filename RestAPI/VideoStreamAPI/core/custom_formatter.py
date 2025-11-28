@@ -10,15 +10,27 @@ def InitLogger(app):
     ch1 = logging.StreamHandler()
     ch1.setFormatter(CustomFormatter(colors=True))
     logger.addHandler(ch1)
+
     ch2 = logging.FileHandler("logs/app.log")
     ch2.setFormatter(CustomFormatter(colors=False))
     logger.addHandler(ch2)
 
-    
     werkzeug_logger = logging.getLogger('werkzeug')
     werkzeug_logger.handlers.clear()
     werkzeug_logger.addHandler(ch1)
     werkzeug_logger.setLevel(logging.DEBUG)
+
+    gunicorn_error = logging.getLogger("gunicorn.error")
+    gunicorn_error.handlers.clear()
+    gunicorn_error.addHandler(ch1)
+    gunicorn_error.addHandler(ch2)
+    gunicorn_error.setLevel(logging.DEBUG)
+
+    gunicorn_access = logging.getLogger("gunicorn.access")
+    gunicorn_access.handlers.clear()
+    gunicorn_access.addHandler(ch1)
+    gunicorn_access.addHandler(ch2)
+    gunicorn_access.setLevel(logging.DEBUG)
 
     
 

@@ -15,17 +15,18 @@ def create_api(app_context):
         title= "Video Streamer API",
         version= "1.0",
         description= "Video Streamer API",
-        doc= "/docs"
+        doc= "/api/doc",
+        prefix="/api"
     ) 
 
-    api.add_namespace(create_api_auth(app_context), path="/api/auth")
-    api.add_namespace(create_api_media(app_context), path="/api/media")
-    api.add_namespace(create_api_video_meta(app_context), path="/api/video_meta")
-    api.add_namespace(create_api_director(app_context), path="/api/director")
-    api.add_namespace(create_api_star(app_context), path="/api/star")
-    api.add_namespace(create_api_genre(app_context), path="/api/genre")
-    api.add_namespace(create_api_series(app_context), path="/api/series")
-    api.add_namespace(create_api_user(app_context), path="/api/user")
+    api.add_namespace(create_api_auth(app_context), path="/auth")
+    api.add_namespace(create_api_media(app_context), path="/media")
+    api.add_namespace(create_api_video_meta(app_context), path="/video_meta")
+    api.add_namespace(create_api_director(app_context), path="/director")
+    api.add_namespace(create_api_star(app_context), path="/star")
+    api.add_namespace(create_api_genre(app_context), path="/genre")
+    api.add_namespace(create_api_series(app_context), path="/series")
+    api.add_namespace(create_api_user(app_context), path="/user")
 
     return api
     

@@ -22,7 +22,7 @@ authorizations = {
 }
 
 def create_api_series(app_context):
-    api: Namespace = Namespace("series", description="Video series namespace", authorizations=authorizations)
+    api: Namespace = Namespace("series", description="Video series", authorizations=authorizations)
 
     series_model = get_series_model(api)
     series_request_model = get_series_request_model(api)

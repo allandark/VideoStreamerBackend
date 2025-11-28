@@ -23,7 +23,7 @@ authorizations = {
 }
 
 def create_api_director(app_context):
-    api: Namespace = Namespace("director", description="Director namespace", authorizations=authorizations)
+    api: Namespace = Namespace("director", description="Director", authorizations=authorizations)
 
     director_model = get_director_model(api)
     director_request_model = get_director_request_model(api)

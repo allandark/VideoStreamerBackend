@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python -m VideoStreamAPI.app
+gunicorn -w 4 -b ${FLASK_RUN_HOST}:${FLASK_RUN_PORT} --access-logfile - VideoStreamAPI.app:app

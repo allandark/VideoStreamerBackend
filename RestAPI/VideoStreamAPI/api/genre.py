@@ -23,7 +23,7 @@ authorizations = {
 }
 
 def create_api_genre(app_context):
-    api: Namespace = Namespace("genre", description="Video Genre namespace", authorizations=authorizations)
+    api: Namespace = Namespace("genre", description="Video Genre", authorizations=authorizations)
 
     genre_model = get_genre_model(api)
     genre_request_model = get_genre_request_model(api)

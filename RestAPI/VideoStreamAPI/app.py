@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from dataclasses import dataclass
+import os
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
@@ -23,7 +24,7 @@ def create_app():
     """
     
     app = Flask(__name__)
-    CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://localhost:8081"])
+    CORS(app, supports_credentials=True, origins=["http://localhost:8080"])
     InitLogger(app)
     logger.info("Initializing server ...")
 
@@ -43,7 +44,7 @@ def create_app():
 
     return app
 
-if __name__ == "__main__":
-    app = create_app()
-    logger.info("Starting server ...")
-    app.run(host='0.0.0.0', port=5000)
+
+app = create_app()
+
+  

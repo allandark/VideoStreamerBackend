@@ -21,7 +21,7 @@ authorizations = {
 }
 
 def create_api_star(app_context):
-    api: Namespace = Namespace("star", description="Stars/actor/actresses namespace", authorizations=authorizations)
+    api: Namespace = Namespace("star", description="Stars/actor/actresses", authorizations=authorizations)
 
     star_model = get_star_model(api)
     star_request_model = get_star_request_model(api)

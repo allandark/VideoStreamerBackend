@@ -21,7 +21,7 @@ authorizations = {
 
 def create_api_media(app_context):
 
-    api: Namespace = Namespace("media", description="Media namespace for providing HLS video data", authorizations=authorizations)
+    api: Namespace = Namespace("media", description="Media endpoint for providing HLS video data", authorizations=authorizations)
 
     # Models
     # media_model: Model = api.model('MediaModel', {

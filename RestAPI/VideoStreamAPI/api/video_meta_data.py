@@ -21,7 +21,7 @@ authorizations = {
 }
 
 def create_api_video_meta(app_context):
-    api: Namespace = Namespace("video_meta", description="Video Meta data namespace for database tracking of videos", authorizations=authorizations)
+    api: Namespace = Namespace("video_meta", description="Video Meta data endpoint for database tracking of videos", authorizations=authorizations)
 
     # Models
     subtitle_model = get_subtitle_model(api)

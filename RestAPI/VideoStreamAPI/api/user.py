@@ -21,7 +21,7 @@ authorizations = {
 }
 
 def create_api_user(app_context):
-    api: Namespace = Namespace("user", description="User namespace", authorizations=authorizations)
+    api: Namespace = Namespace("user", description="User", authorizations=authorizations)
 
     user_model = get_user_model(api)
     user_request_model = get_user_request_model(api)
