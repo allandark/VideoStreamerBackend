@@ -1,13 +1,13 @@
 
 from flask_restx import Api
-from api.auth import create_api_auth, jwt
-from api.media import create_api_media
-from api.director import create_api_director
-from api.star import create_api_star
-from api.genre import create_api_genre
-from api.series import create_api_series
-from api.video_meta_data import create_api_video_meta
-from api.user import create_api_user
+from VideoStreamAPI.api.auth import create_api_auth, jwt
+from VideoStreamAPI.api.media import create_api_media
+from VideoStreamAPI.api.director import create_api_director
+from VideoStreamAPI.api.star import create_api_star
+from VideoStreamAPI.api.genre import create_api_genre
+from VideoStreamAPI.api.series import create_api_series
+from VideoStreamAPI.api.video_meta_data import create_api_video_meta
+from VideoStreamAPI.api.user import create_api_user
 
 def create_api(app_context):
 

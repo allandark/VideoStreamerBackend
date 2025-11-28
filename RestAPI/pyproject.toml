@@ -1,12 +1,11 @@
 [project]
 name = "VideoStreamAPI"
 version = "0.1.0"
-description = "Video Streamer backend. Flask restx."
+description = "Video Streamer backend."
 
 
-[tool.poetry]
-packages = [{ include = "VideoStreamAPI"}]
-
+[tool.pytest.ini_options]
+pythonpath = ["."]
 
 [build-system]
 build-backend = "flit_core.buildapi"

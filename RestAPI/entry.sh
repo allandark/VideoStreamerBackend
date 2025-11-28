@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python VideoStreamAPI/app.py
+python -m VideoStreamAPI.app

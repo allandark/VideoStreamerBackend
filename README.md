@@ -14,6 +14,8 @@ This repo contains a RESTFul API with an MySQL database for holding media data. 
 
 
 #### Build 
+The SQL Container expects that a `db_root_password.txt` file, in the root dir, containing the SQL server root password.
+
 **Setup venv** 
 ```
 python -m venv .venv

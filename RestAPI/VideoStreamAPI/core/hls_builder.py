@@ -1,9 +1,6 @@
 import ffmpeg
-import sys
 from datetime import datetime
-# from .video_manager import VideoMeta
 import asyncio
-
 import logging
 logger : logging.Logger = logging.getLogger("app")
 

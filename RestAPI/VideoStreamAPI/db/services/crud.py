@@ -1,9 +1,9 @@
-from ..db_utils import model_to_dict, from_dict
-from ..models import GenreModel
 from sqlalchemy.orm import joinedload
-
 import logging
 logger : logging.Logger = logging.getLogger("app")
+
+from VideoStreamAPI.db.db_utils import model_to_dict, from_dict
+from VideoStreamAPI.db.models import GenreModel
 
 class CrudService:
     def __init__(self, session, model):

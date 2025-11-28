@@ -1,30 +1,26 @@
 from flask import Flask
 from flask_cors import CORS
-
-from api import create_api, jwt
-from core.custom_formatter import CustomFormatter, InitLogger
-from core.media_manager import MediaManager
-from db.db_context import DatabaseContext
 from dataclasses import dataclass
-import os
-
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
+from VideoStreamAPI.api import create_api, jwt
+from VideoStreamAPI.core.custom_formatter import InitLogger
+from VideoStreamAPI.core.media_manager import MediaManager
+from VideoStreamAPI.db.db_context import DatabaseContext
 
-
-from core.upload_manager import UploadManager
 
 @dataclass
 class AppContext:
-    """ Context class meant to dependencies to 
-
+    """ Context class for passing db_context and media_context to api endpoints
     """
     media_manager : MediaManager
     db_context : DatabaseContext
     
 
 def create_app():
+    """ Create flask server
+    """
     
     app = Flask(__name__)
     CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://localhost:8081"])
@@ -32,14 +28,8 @@ def create_app():
     logger.info("Initializing server ...")
 
 
-    db_context = DatabaseContext(create_tables=True, seed=False)
-    
-    # TEMP
-    abs_path = f"{os.getcwd()}/testfiles"
-    media_manager = MediaManager(abs_video_dir=abs_path)
-
-    # END TEMP
-
+    db_context = DatabaseContext(create_tables=True, seed=False)    
+    media_manager = MediaManager(abs_video_dir="/var/media")
 
     app_context = AppContext(
         db_context = db_context,

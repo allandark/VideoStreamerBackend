@@ -2,15 +2,14 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.engine import URL
-from .models import Base, UserModel, VideoMetaDataModel, SubtitlesModel
-from .models import GenreModel, StarModel, SeriesModel, DirectorModel, MediaMetaDataModel
-from .services.crud import CrudService
 import os
-
 import datetime
-
 import logging
 logger : logging.Logger = logging.getLogger("app")
+
+from VideoStreamAPI.db.models import Base, UserModel, VideoMetaDataModel, SubtitlesModel
+from VideoStreamAPI.db.models import GenreModel, StarModel, SeriesModel, DirectorModel, MediaMetaDataModel
+from VideoStreamAPI.db.services.crud import CrudService
 
 
 def load_pw_file():

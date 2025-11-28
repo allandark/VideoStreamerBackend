@@ -4,12 +4,13 @@ from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identi
 from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from VideoStreamAPI.db.models import SubtitlesModel
-from .api_models import get_genre_model, get_genre_request_model
-
 from datetime import datetime, date
 import logging
 logger : logging.Logger = logging.getLogger("app")
+
+from VideoStreamAPI.api.api_models import get_genre_model, get_genre_request_model
+
+
 
 jwt = JWTManager()
 

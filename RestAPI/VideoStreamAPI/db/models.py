@@ -2,7 +2,6 @@ from sqlalchemy import ForeignKey, Table, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 from sqlalchemy.types import String, Date, DateTime
 from typing import List
-
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
