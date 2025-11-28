@@ -34,8 +34,6 @@ class HLSBuilder:
       {"bandwidth_ffmpeg": "2800k", "bandwidth": 2800000, "resolution": "1920x1080", "name": "1080p"},
     ]
 
-
-
   def add_video_track(self, resolution : str, exclude_audio: bool = False):
     """Add video variant track with given resolution
 
@@ -87,9 +85,6 @@ class HLSBuilder:
           "uri": uri
         })
 
-    
-
-
   def add_subtitle_track(self, name: str , language: str = "", id: int = 0, file: str | None = None):
     """Add subtitle track to video
 
@@ -130,7 +125,6 @@ class HLSBuilder:
           track['file'] = file
         self.subtitle_tracks.append(track)
 
-
   def add_thumbnail(self, time: float=0.1, width: int= 120):
     """add a thumbnail png to be created at time with width
 
@@ -141,12 +135,10 @@ class HLSBuilder:
     self.thumbnail['time'] = time
     self.thumbnail['width'] = width
 
-
   def add_master(self, file_name = "master"):
     if 'file_name' in self.master:
       return
     self.master['file_name'] = file_name
-
 
   def build(self):
     result = asyncio.run(self.build_async())
@@ -189,7 +181,6 @@ class HLSBuilder:
       "audio_tracks": self.audio_tracks,
       "subtitle_tracks" : self.subtitle_tracks,
     }
-
 
   async def _build_video_track(self, video_track, time=0):
     
@@ -286,7 +277,6 @@ class HLSBuilder:
     except ffmpeg.Error as e:
         logger.error(e.stderr.decode('utf-8'))
         return False
-
 
   async def _build_subtitle_track(self, subtitle_track, time=0):
     track = self.video.subtitle_tracks[subtitle_track['track_id']]
