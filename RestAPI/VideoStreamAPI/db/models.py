@@ -198,14 +198,40 @@ class MediaMetaDataModel(Base):
   __tablename__ = "MEDIA_META_DATA"
 
   id: Mapped[int] = mapped_column(primary_key=True)
-
-
+  hash: Mapped[String] = mapped_column(String(64))
+  name: Mapped[String] = mapped_column(String(256))
+  mimetype: Mapped[String] = mapped_column(String(64))
+  
+  # Relationships
+  
+  tasks: Mapped[List["MediaTaskModel"]] = relationship(
+        "MediaTaskModel", back_populates="media", cascade="all, delete-orphan"
+    )
   video: Mapped["VideoMetaDataModel"] = relationship(
         back_populates="media",
         uselist=False
     )
+  def __repr__(self) -> str:
+    return "".join((f"MediaMetaDataModel(id={self.id!r}, hash={self.hash!r}, ",
+            f", name={self.name!r}, mimetype={self.mimetype!r}",
+            f")"))
 
 
-  hash: Mapped[String] = mapped_column(String(64))
-  name: Mapped[String] = mapped_column(String(256))
-  mimetype: Mapped[String] = mapped_column(String(64))
+
+class MediaTaskModel(Base):
+  __tablename__ = "MEDIA_TASK"
+  id: Mapped[int] = mapped_column(primary_key=True)
+  task_type: Mapped[String] = mapped_column(String(64))
+  status: Mapped[String] = mapped_column(String(64))
+  error_message: Mapped[String] = mapped_column(String(512))
+  creation_date: Mapped[DateTime] = mapped_column(DateTime())
+
+  media_id: Mapped[int] = mapped_column(ForeignKey("MEDIA_META_DATA.id"))
+  media: Mapped["MediaMetaDataModel"] = relationship("MediaMetaDataModel", back_populates="tasks")
+  def __repr__(self) -> str:
+    return "".join((f"MediaTaskModel(id={self.id!r}, task_type={self.task_type!r}, ",
+            f", status={self.status!r}, creation_date={self.creation_date!r}",
+            f"creation_date={self.error_message!r}, media_id={self.media_id!r})"))
+  
+
+# Task types: hls_build, file_upload

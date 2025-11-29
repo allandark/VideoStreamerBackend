@@ -7,7 +7,7 @@ import datetime
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
-from VideoStreamAPI.db.models import Base, UserModel, VideoMetaDataModel, SubtitlesModel
+from VideoStreamAPI.db.models import Base, UserModel, VideoMetaDataModel, SubtitlesModel, MediaTaskModel
 from VideoStreamAPI.db.models import GenreModel, StarModel, SeriesModel, DirectorModel, MediaMetaDataModel
 from VideoStreamAPI.db.services.crud import CrudService
 
@@ -21,7 +21,7 @@ def load_pw_file():
     return None
 
 class DatabaseContext:
-    def __init__(self, create_tables: bool = False, seed: bool = False ):
+    def __init__(self, create_tables: bool = False ):
         logger.info("Initializing database")
 
         self.db_password = load_pw_file()
@@ -57,12 +57,10 @@ class DatabaseContext:
         self.genres = CrudService(self.db_session, GenreModel)
         self.subtitles = CrudService(self.db_session, SubtitlesModel)
         self.media = CrudService(self.db_session, MediaMetaDataModel)
+        self.tasks = CrudService(self.db_session, MediaTaskModel)
 
         if create_tables:
             self.CreateTables()
-        if seed:
-            self.Seed()
-
 
     def CreateTables(self):
         try:
@@ -71,45 +69,4 @@ class DatabaseContext:
         except Exception as e:
             logger.error(f"CreateTables failed: {e}")
 
-    def Seed(self):
-        with self.db_session() as session:        
-            try:
-
-                user = UserModel()
-                user.email = "john@doe.dk"
-                user.hashed_password = "1234"
-                user.creation_date = datetime.datetime.now()
-                user.user_type = "admin"      
-                user.user_name = "john"          
-                session.add(user)
-
-                genre = GenreModel() 
-                genre.name = "Action"
-                genre.rating = 4.5
-                
-                session.add(genre)
-
-                actor = StarModel()
-                actor.full_name = "Cicholas Nage"
-                actor.rating = 2.5
-
-
-                video = VideoMetaDataModel()
-                video.file_path = "/some/path"
-                video.duration_seconds = 500
-                video.language = "English"
-                video.screen_height = 0
-                video.screen_width = 0
-                video.rating = 0.5
-                video.upload_date = datetime.datetime.now()
-                video.title = "Some movie title"
-                session.add(video)
-
-                genre.videos.append(video)
-
-                session.commit()
-                logger.debug(f"User added to db: {user}")
-            except Exception as e:
-                session.rollback()
-                logger.error(f"Failed top add models: {e}")
-
+   

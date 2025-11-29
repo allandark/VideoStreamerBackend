@@ -35,6 +35,7 @@ def create_api_video_meta(app_context):
     # Parsers
     request_parser = get_video_request_parser(api)
 
+
     @api.route('/')
     class VideoMeta(Resource):
 
@@ -60,19 +61,13 @@ def create_api_video_meta(app_context):
 
             if not app_context.media_manager.uploader.FileExists(media['hash'], media['mimetype']):
                 return media, 400
-            
+            # TODO: which task should be done when adding video
+            # media_status = media['tasks'][0].get("status", "")
+            # if media_status != "done":
+            #     return None, 400
+
             file_name =  app_context.media_manager.uploader.GetFileName(media['hash'], media['mimetype'])
             meta_data = app_context.media_manager.video_manager.LoadData(file_name)
-
-            if app_context.media_manager.video_manager.DirExists(media['hash']):
-                app_context.media_manager.video_manager.DirRemove(media['hash'])
-
-            hls_data = app_context.media_manager.video_manager.CreateHls(
-                meta_data, media['hash'], 
-                hls_playlist_base_url=f"http://localhost:5000/api/media/playlist/{media_id}/",
-                hls_segment_base_url=f"http://localhost:5000/api/media/chunk/{media_id}/")
-            if not hls_data['build_status']:
-                return None, 400
 
             file_name_no_ext = str(file_name).split('.')[0]
             upload_date = datetime.now().isoformat()

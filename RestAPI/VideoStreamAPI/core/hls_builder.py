@@ -31,6 +31,8 @@ class HLSBuilder:
       {"bandwidth_ffmpeg": "2800k", "bandwidth": 2800000, "resolution": "1920x1080", "name": "1080p"},
     ]
 
+    self.LOG_LENGTH = 5000
+
   def add_video_track(self, resolution : str, exclude_audio: bool = False):
     """Add video variant track with given resolution
 
@@ -145,24 +147,34 @@ class HLSBuilder:
     tasks = {}
     build_status = True
 
+    logger.info(f"Building HLS...")
+
     
     if 'time' in self.thumbnail:
+      logger.debug(f"Thumbnail task")
       tasks['thumbnail'] = asyncio.create_task(self._build_thumbnail(self.thumbnail))
 
     for video_track in self.video_tracks:
+      logger.debug(f"Video task: {video_track['name']}")
       tasks[f"vid_{video_track['name']}"] = asyncio.create_task( self._build_video_track(video_track=video_track, time=self.video_time))
         
     for audio_track in self.audio_tracks:
+      logger.debug(f"Audio task: {audio_track['name']}")
       tasks[f"au_{audio_track['name']}"] = asyncio.create_task(self._build_audio_track(audio_track=audio_track, time=self.video_time))
 
     for sub_track in self.subtitle_tracks:
+      logger.indebugfo(f"Sub task: {sub_track['name']}")
       tasks[f"sub_{sub_track['name']}"] = asyncio.create_task(self._build_subtitle_track(subtitle_track=sub_track, time=self.video_time))
 
+    logger.debug("Fire tasks")
     results = await asyncio.gather(*tasks.values())
     build_status = all(results)
 
     if 'file_name' in self.master:
+      logger.debug("Building master")
       self._build_master(self.master, self.video_tracks, self.audio_tracks, self.subtitle_tracks)
+
+    logger.info(f"HLS builder done, status: {build_status}, output: \"{self.output_prefix}\"")
 
     return {
       "build_status": build_status,
@@ -204,16 +216,28 @@ class HLSBuilder:
 
     if self.hls_segment_base_url:
       output_kwargs['hls_base_url'] = self.hls_segment_base_url
-
+    logger.debug(f"ffmpeg args: {output_kwargs}")
     try:
-      out, err = (
+      process  = (
                     ffmpeg
                     .input(self.video.input_file, **input_kwargs)  
                     .filter('scale', -2, video_track['name'][:-1]) 
                     .output(output_file, **output_kwargs)
                     .overwrite_output()
-                    .run(capture_stdout=True, capture_stderr=True)
+                    .run_async(pipe_stdout=True, pipe_stderr=True)
                   )
+      loop = asyncio.get_running_loop()
+      stdout, stderr = await loop.run_in_executor(
+          None,
+          process.communicate
+      )
+      if stdout:
+        logger.debug(stdout.decode(errors="ignore")[:500])
+
+      if process.returncode != 0:
+        raise RuntimeError(
+            f"FFmpeg failed for {video_track['name']}:\n{stderr.decode(errors='ignore')[:500]}"
+        )
 
       return True
     except ffmpeg.Error as e:
@@ -243,16 +267,27 @@ class HLSBuilder:
     
     if self.hls_segment_base_url:
       output_kwargs['hls_base_url'] = self.hls_segment_base_url
-
+    logger.debug(f"ffmpeg args: {output_kwargs}")
     try:
-      out, err = (
+      process  = (
                     ffmpeg
                     .input(self.video.input_file, **input_kwargs)  
                     .output(output_file, **output_kwargs)
                     .overwrite_output()
-                    .run(capture_stdout=True, capture_stderr=True)
+                    .run_async(pipe_stdout=True, pipe_stderr=True)
                   )
+      loop = asyncio.get_running_loop()
+      stdout, stderr = await loop.run_in_executor(
+          None,
+          process.communicate
+      )
+      if stdout:
+        logger.debug(stdout.decode(errors="ignore")[:self.LOG_LENGTH])
 
+      if process.returncode != 0:
+        raise RuntimeError(
+            f"FFmpeg failed for {audio_track['name']}:\n{stderr.decode(errors='ignore')[:self.LOG_LENGTH]}"
+        )
       return True
     except ffmpeg.Error as e:
       logger.error(e.stderr.decode('utf-8'))
@@ -262,14 +297,26 @@ class HLSBuilder:
 
     out_filename = f"{self.video.output_target_dir}/{self.output_prefix}_thumbnail.png"
     try:
-        (
+        process  =(
             ffmpeg
             .input(self.video.input_file, ss=thumbnail_dict['time'])
             .filter('scale', thumbnail_dict['width'], -1)
-            .output(out_filename, vframes=1)
+            .output(out_filename, vframes=1, update=1)
             .overwrite_output()
-            .run(capture_stdout=True, capture_stderr=True)
+            .run_async(pipe_stdout=True, pipe_stderr=True)
         )
+        loop = asyncio.get_running_loop()
+        stdout, stderr = await loop.run_in_executor(
+            None,
+            process.communicate
+        )
+        if stdout:
+            logger.debug(stdout.decode(errors="ignore")[:self.LOG_LENGTH])
+
+        if process.returncode != 0:
+          raise RuntimeError(
+              f"FFmpeg failed for thumbnail:\n{stderr.decode(errors='ignore')[:self.LOG_LENGTH]}"
+          )
         return True
     except ffmpeg.Error as e:
         logger.error(e.stderr.decode('utf-8'))
@@ -296,16 +343,28 @@ class HLSBuilder:
     
     if self.hls_segment_base_url:
       output_kwargs['hls_base_url'] = self.hls_segment_base_url
-
+    logger.debug(f"ffmpeg args: {output_kwargs}")
     try:
-      out, err = (
+      process  = (
                     ffmpeg
                     .input(self.video.input_file, **input_kwargs)  
                     .output(output_file, **output_kwargs)
                     .overwrite_output()
-                    .run(capture_stdout=True, capture_stderr=True)
+                    .run_async(pipe_stdout=True, pipe_stderr=True)
                   )
+      
+      loop = asyncio.get_running_loop()
+      stdout, stderr = await loop.run_in_executor(
+          None,
+          process.communicate
+      )
+      if stdout:
+        logger.debug(stdout.decode(errors="ignore")[:self.LOG_LENGTH])
 
+      if process.returncode != 0:
+        raise RuntimeError(
+            f"FFmpeg failed for {subtitle_track['name']}:\n{stderr.decode(errors='ignore')[:self.LOG_LENGTH]}"
+        )
       return True
     except ffmpeg.Error as e:
       logger.error(e.stderr.decode('utf-8'))

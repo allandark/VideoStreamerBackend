@@ -5,6 +5,7 @@ from flask import send_file, send_from_directory,request
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
+from VideoStreamAPI.api.api_models import get_media_task_model, get_media_task_request_model
 
 import logging
 logger : logging.Logger = logging.getLogger("app")
@@ -23,12 +24,7 @@ def create_api_media(app_context):
 
     api: Namespace = Namespace("media", description="Media endpoint for providing HLS video data", authorizations=authorizations)
 
-    # Models
-    # media_model: Model = api.model('MediaModel', {
-    #     'name': fields.String(required=True, description='Name of video file/dir'),
-    #     'type': fields.String(required=True, description='Type of video file')
-    #     })
-
+    #TODO: move
     convert_hls_model: Model = api.model("ConvertHLSModel",{
         'name': fields.String(required=True, description='Name of video file/dir')
     })
@@ -40,12 +36,7 @@ def create_api_media(app_context):
         })
 
     
-    media_model = api.model('MediaModel',{
-        'id' : fields.Integer(required=True, description='Primary key'),
-        'name' : fields.String(required=True, description='media name'),
-        'mimetype' : fields.String(required=True, description='media type'),
-        'hash' : fields.String(required=True, description='file sh265-hash'),
-    })
+
 
 
     file_response_schema = api.schema_model('FileResponse', {
@@ -74,6 +65,61 @@ def create_api_media(app_context):
                             type=str, required=True,
                             help='Video name')
 
+    media_task_model = get_media_task_model(api)
+    media_task_request_model = get_media_task_request_model(api)
+
+    media_model = api.model('MediaModel',{
+        'id' : fields.Integer(required=True, description='Primary key'),
+        'name' : fields.String(required=True, description='media name'),
+        'mimetype' : fields.String(required=True, description='media type'),
+        'hash' : fields.String(required=True, description='file sh265-hash'),
+        'tasks' : fields.List(fields.Nested(media_task_model))
+    })
+
+    @api.route('/task')
+    class Task(Resource):
+        @api.doc(description="Returns all tasks in database")
+        @api.marshal_list_with(media_task_model)
+        def get(self):
+            tasks = app_context.db_context.tasks.GetAll()
+            return tasks, 200
+
+        @api.doc(description="Start new task")
+        @api.expect(media_task_request_model)
+        @api.marshal_with(media_task_model)
+        def post(self):
+            media_id = request.json['media_id']
+            #TODO: generic
+            task = app_context.media_manager.AddTask(
+                type=request.json['task_type'],
+                media_id=media_id,
+                hls_playlist_base_url=f"{request.json['hls_url']}/api/media/playlist/{media_id}/",
+                hls_segment_base_url=f"{request.json['hls_url']}/api/media/chunk/{media_id}/"
+                )
+            if task is None:
+                return task, 400
+            return task, 201
+            
+
+    @api.route('/task/<int:id>')
+    class Task(Resource):
+        @api.doc(description="Get task by id from database")
+        @api.marshal_with(media_task_model)
+        def get(self, id):
+            task = app_context.db_context.tasks.Get(id)
+            if task is None:
+                return None, 404
+            return task, 200
+
+        @api.doc(description="Delete task by id from database")
+        def delete(self, id):
+            task = app_context.db_context.tasks.Get(id)
+            if task is None:
+                return None, 404
+            res = app_context.db_context.tasks.Delete(id)
+            if not res:
+                return {"error": "could not delete task"}, 500
+            return {"message": "task deleted successfully"}, 200
 
     @api.route('/download/<int:id>')
     class MP4Downloader(Resource):

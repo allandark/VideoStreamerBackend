@@ -29,8 +29,8 @@ def create_app():
     logger.info("Initializing server ...")
 
 
-    db_context = DatabaseContext(create_tables=True, seed=False)    
-    media_manager = MediaManager(abs_video_dir="/var/media")
+    db_context = DatabaseContext(create_tables=True)    
+    media_manager = MediaManager(abs_video_dir="/var/media", db=db_context)
 
     app_context = AppContext(
         db_context = db_context,

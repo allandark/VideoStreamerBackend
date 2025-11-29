@@ -80,8 +80,7 @@ class CrudService:
         with self.session_factory() as session:
             try: 
                 entity = session.get(self.model, data['id'])   
-                entity = from_dict(entity, data, session) 
-                # session.update(entity)  
+                entity = from_dict(entity, data, session)  
                 session.commit()
                 return model_to_dict(entity, include_relationships=True, session=session)
             except Exception as e:
