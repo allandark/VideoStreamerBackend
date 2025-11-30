@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 from VideoStreamAPI.api.api_models import get_media_task_model, get_media_task_request_model
+from VideoStreamAPI.core.media_manager import TaskType, TaskStatus
 
 import logging
 logger : logging.Logger = logging.getLogger("app")
@@ -35,6 +36,16 @@ def create_api_media(app_context):
         'file': fields.Raw(required=True, description='File to upload', example='file'),
         })
 
+
+    upload_chunk_model = api.model('UploadChunkModel',{
+        "task_id": fields.String(required=True, description="ID of the upload task"),
+        "chunk_index": fields.Integer(required=True),
+        "chunk_data": fields.String(required=True, description="Binary file part")
+    })
+
+    complete_chunk_model = api.model('CompleteChunkModel',{
+        "task_id" : fields.String(required=True, description="ID of the upload task")
+    })
     
 
 
@@ -89,12 +100,15 @@ def create_api_media(app_context):
         @api.marshal_with(media_task_model)
         def post(self):
             media_id = request.json['media_id']
-            #TODO: generic
-            task = app_context.media_manager.AddTask(
-                type=request.json['task_type'],
+            task_type = request.json['task_type']
+            params = request.json.get('params',{})
+
+            queue = False if task_type == TaskType.FILE_REASSEMBLY else True
+            task = app_context.media_manager.AddOrUpdateTask(
+                type=task_type,
                 media_id=media_id,
-                hls_playlist_base_url=f"{request.json['hls_url']}/api/media/playlist/{media_id}/",
-                hls_segment_base_url=f"{request.json['hls_url']}/api/media/chunk/{media_id}/"
+                queue_task=queue,
+                **params
                 )
             if task is None:
                 return task, 400
@@ -135,6 +149,50 @@ def create_api_media(app_context):
             url = app_context.media_manager.uploader.GetFileUrl(hash=meta_data['hash'], mimetype=meta_data['mimetype'])
             return send_file( url,  as_attachment=True)
 
+
+    @api.route('/upload/chunk_complete')
+    class UploadChunkComplete(Resource):
+        @api.doc(description='Complete chunk upload')
+        @api.expect(complete_chunk_model)
+        @api.marshal_with(media_task_model)
+        def post(self):
+            task_id = int(request.json["task_id"])
+            task = app_context.db_context.tasks.Get(task_id)
+
+            if len(task["params"]["received_chunks"]) != task["params"]["chunk_count"]:
+                return {"error": "Not all chunks uploaded"}, 400
+            
+            app_context.media_manager.AddOrUpdateTask(
+                media_id = task['media_id'],
+                task_id = task_id,
+                queue_task = True                
+            )
+
+    @api.route('/upload/chunk_upload')
+    class UploadChunk(Resource):
+        @api.doc(description='Upload chunk file')
+        @api.expect(upload_chunk_model)
+        @api.marshal_with(media_task_model)
+        def post(self):
+            task_id = int(request.form["task_id"])
+            chunk_index = int(request.form["chunk_index"])
+            chunk_file = request.files["chunk_data"]
+            task = app_context.db_context.tasks.Get(task_id)
+            if task is None:
+                return None, 404
+            if task['status'] != TaskStatus.PENDING:
+                logger.warning(f"Cannot upload chunks without a valid task")
+                return None, 400
+            app_context.media_manager.ChunkSave(task_id, chunk_index, chunk_file)
+            task['params']['received_chunks'][chunk_index] = True
+            app_context.media_manager.AddOrUpdateTask(
+                media_id = task['media_id'],
+                task_id = task_id,
+                queue_task = False ,
+                **task['params']                               
+            )
+            return task, 200
+
     @api.route('/upload')
     class MP4Uploader(Resource):
         @api.doc('Get all media files meta data')
@@ -171,7 +229,7 @@ def create_api_media(app_context):
             })
             return media, 201
 
-    @api.route('/thumbnail/<int:media_id>')
+    @api.route('/hls/thumbnail/<int:media_id>')
     class MP4UploaderName(Resource):
         ''' Returns thumbnail of media
         '''
@@ -184,7 +242,7 @@ def create_api_media(app_context):
             dir = app_context.media_manager.video_manager.GetDir(media['hash'])                
             return send_from_directory(dir, "out_thumbnail.png", mimetype='image/png')
                 
-    @api.route('/playlist/<int:media_id>')
+    @api.route('/hls/playlist/<int:media_id>')
     class HlsPlaylist(Resource):
         ''' Request master HLS playlist file
         '''
@@ -198,7 +256,7 @@ def create_api_media(app_context):
             dir = app_context.media_manager.video_manager.GetDir(media['hash'])
             return send_from_directory(dir,  "out_master.m3u8", mimetype='application/vnd.apple.mpegurl')
 
-    @api.route('/playlist/<int:media_id>/<string:file_name>')
+    @api.route('/hls/playlist/<int:media_id>/<string:file_name>')
     class HlsPlaylistName(Resource):
         ''' Request specific HLS playlist file
         '''
@@ -210,7 +268,7 @@ def create_api_media(app_context):
             dir = app_context.media_manager.video_manager.GetDir(media['hash'])
             return send_from_directory(dir, file_name, mimetype='application/vnd.apple.mpegurl')
 
-    @api.route('/chunk/<int:media_id>/<string:file_name>')
+    @api.route('/hls/chunk/<int:media_id>/<string:file_name>')
     class HlsChunk(Resource):
         ''' Request Hls chunk data
         '''

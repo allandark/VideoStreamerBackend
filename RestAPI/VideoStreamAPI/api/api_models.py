@@ -194,12 +194,13 @@ def get_media_task_model(api):
         "task_type": fields.String(required=True),
         "status": fields.String(required=True),
         "error_message": fields.String(required=True),
-        'creation_date': fields.DateTime(required=True)
+        'creation_date': fields.DateTime(required=True),
+        "params": fields.Raw(description="Task parameters", required=True)
     })
 
 def get_media_task_request_model(api):
     return api.model('MediaTaskRequestModel',{
         "media_id": fields.Integer(required=True),
         "task_type": fields.String(required=True),
-        "hls_url": fields.String(required=True)
+        "params": fields.Raw(description="Task parameters")
     })

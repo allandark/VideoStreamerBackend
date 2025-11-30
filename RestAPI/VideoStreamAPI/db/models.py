@@ -1,7 +1,9 @@
 from sqlalchemy import ForeignKey, Table, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.types import String, Date, DateTime
-from typing import List
+from sqlalchemy import JSON
+from typing import List, Dict,Any
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
@@ -225,6 +227,11 @@ class MediaTaskModel(Base):
   status: Mapped[String] = mapped_column(String(64))
   error_message: Mapped[String] = mapped_column(String(512))
   creation_date: Mapped[DateTime] = mapped_column(DateTime())
+  params:Mapped[Dict[str, Any]] = mapped_column(
+        MutableDict.as_mutable(JSON),
+        nullable=False,
+        default=dict
+    )
 
   media_id: Mapped[int] = mapped_column(ForeignKey("MEDIA_META_DATA.id"))
   media: Mapped["MediaMetaDataModel"] = relationship("MediaMetaDataModel", back_populates="tasks")
@@ -233,5 +240,3 @@ class MediaTaskModel(Base):
             f", status={self.status!r}, creation_date={self.creation_date!r}",
             f"creation_date={self.error_message!r}, media_id={self.media_id!r})"))
   
-
-# Task types: hls_build, file_upload

@@ -61,11 +61,7 @@ def create_api_video_meta(app_context):
 
             if not app_context.media_manager.uploader.FileExists(media['hash'], media['mimetype']):
                 return media, 400
-            # TODO: which task should be done when adding video
-            # media_status = media['tasks'][0].get("status", "")
-            # if media_status != "done":
-            #     return None, 400
-
+     
             file_name =  app_context.media_manager.uploader.GetFileName(media['hash'], media['mimetype'])
             meta_data = app_context.media_manager.video_manager.LoadData(file_name)
 
@@ -112,6 +108,7 @@ def create_api_video_meta(app_context):
             video = app_context.db_context.videos.Get(id)
             if video is None:
                 return video, 404
+
             video = app_context.db_context.videos.Update(request.json)
 
             return video, 200
