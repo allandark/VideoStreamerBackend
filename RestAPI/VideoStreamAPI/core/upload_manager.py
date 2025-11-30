@@ -43,7 +43,7 @@ class UploadManager:
         else:
             output_file = Path(output_file)
 
-        chunk_files = sorted(task_dir.glob("*.chunk"))
+        chunk_files = sorted(task_dir.glob("*.part"))
         try:
             with open(output_file, "wb") as out_f:
                 for chunk_file in chunk_files:
