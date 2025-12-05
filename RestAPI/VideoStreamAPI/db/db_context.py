@@ -7,7 +7,7 @@ import datetime
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
-from VideoStreamAPI.db.models import Base, UserModel, VideoMetaDataModel, SubtitlesModel, MediaTaskModel
+from VideoStreamAPI.db.models import Base, UserModel, VideoMetaDataModel, MediaTaskModel
 from VideoStreamAPI.db.models import GenreModel, StarModel, SeriesModel, DirectorModel, MediaMetaDataModel
 from VideoStreamAPI.db.services.crud import CrudService
 
@@ -29,7 +29,7 @@ class DatabaseContext:
         self.db_port = os.getenv("MYSQL_PORT")        
         self.db_name = os.getenv("MYSQL_DATABASE")
         logger.debug(f"DB connection info: host={self.db_host}, port={self.db_port}, name={self.db_name}")
-        connection_url = URL.create(
+        self.connection_url = URL.create(
             "mysql+mysqlconnector",
             username="root",
             password=self.db_password,
@@ -38,7 +38,7 @@ class DatabaseContext:
             database=self.db_name
         )
 
-        self.engine = create_engine(connection_url, echo=False, future=True)
+        self.engine = create_engine(self.connection_url, echo=False, future=True)
         self.db_session = sessionmaker(
                             bind=self.engine, 
                             expire_on_commit=False,
@@ -54,8 +54,7 @@ class DatabaseContext:
         self.stars = CrudService(self.db_session, StarModel)
         self.directors = CrudService(self.db_session, DirectorModel)
         self.series = CrudService(self.db_session, SeriesModel)
-        self.genres = CrudService(self.db_session, GenreModel)
-        self.subtitles = CrudService(self.db_session, SubtitlesModel)
+        self.genres = CrudService(self.db_session, GenreModel)        
         self.media = CrudService(self.db_session, MediaMetaDataModel)
         self.tasks = CrudService(self.db_session, MediaTaskModel)
 

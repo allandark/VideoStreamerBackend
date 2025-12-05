@@ -6,7 +6,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
-from VideoStreamAPI.db.models import SubtitlesModel
 from VideoStreamAPI.api.api_models import get_star_model, get_star_request_model
 
 

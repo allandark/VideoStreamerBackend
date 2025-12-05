@@ -17,7 +17,7 @@ class TaskStatus:
 
 class TaskType:
     HLS_BUILD = "hls_build"
-    FILE_REASSEMBLY = "file_reassembly"
+    FILE_REASSEMBLY = "upload_chunked"
 
 class MediaManager:
 
@@ -52,16 +52,46 @@ class MediaManager:
             }
             # TODO: check for correct params
             if type == TaskType.HLS_BUILD:
-                pass
+                if media_id == 0:
+                    logger.warning(f"hls_build cannot have undefined media_id. Aborting task")
+                    task_data["error_message"] = "hls_build cannot have undefined media_id"
+                    task_data['status'] = TaskStatus.ERROR
+                    queue_task = False
+                
             elif type == TaskType.FILE_REASSEMBLY:
+                if media_id == 0 and 'mimetype' in task_data['params']:
+                    hash = task_data['params'].get('hash', "")
+                    mimetype =  task_data['params']['mimetype']
+                    if not self.uploader.FileExists(hash, mimetype):
+                        # Create new media model
+                        media = self.db.media.Create({
+                            "name": task_data['params'].get('file_name', "DefaultMediaName"),
+                            "hash": hash,
+                            "mimetype" : mimetype
+                        })
+                        task_data['media_id'] = media['id']
+                    else:
+                        logger.error(f"Media file already exists: {self.uploader.GetFileName(hash, mimetype)}")
+                        task_data['status'] = TaskStatus.ERROR
+                        task_data['error_message'] = "Media file already exists"
+                        task_data['media_id'] = None
+                else:
+                    logger.error(f"Failed to create media for task: {task_data}")
+                    task_data['media_id'] = None
+
+
                 if 'file_name' in task_data['params'] or\
                         'chunk_size' in task_data['params'] or\
                         'chunk_count' in task_data['params']:
-                    task_data['params']['received_chunks'] = []
+                    task_data['params']['received_chunks'] = {}
                 else:
                     task_data['status'] = TaskStatus.ERROR
                     task_data['error_message'] = "Wrong params provided. Task requires: \"file_name\", \"chunk_size\", \"chunk_count\""
                 
+            if task_data is None:
+                logger.error(f"Failed to create media task")
+                return None
+
             task = self.db.tasks.Create(task_data)
             logger.info(f"Created new Media task: {task}")
         else:
@@ -108,13 +138,15 @@ class MediaManager:
                     self.db.tasks.Update(task_db)
             elif task['task_type'] == TaskType.FILE_REASSEMBLY:
                 logger.info(f"Starting task: {task_db}")
-                file_name = self.uploader.GetFileName(media['hash'], media['mimetype'])
-                res = self.uploader.ChunkAssemble(task["id"],file_name)
-                if res is None:
+                media = self.db.media.Get(task["media_id"])
+                hash = self.uploader.ChunkAssemble(task["id"], media['mimetype'])
+                if hash is None:
                     logger.error(f"failed to assemble file: {file_name}")
                     task_db['status'] = TaskStatus.ERROR
                 else:
+                    media['hash'] = hash
                     task_db['status'] = TaskStatus.DONE
+                    self.db.media.Update(media)
                 self.db.tasks.Update(task_db)
                 
             else:

@@ -32,7 +32,7 @@ class UploadManager:
             logger.error(f"Failed to save chunk file: {e}")
             return None
 
-    def ChunkAssemble(self, task_id: int, output_file: Optional[str] = None):
+    def ChunkAssemble(self, task_id: int, mimetype : str ,output_file: Optional[str] = None):
         task_dir = self.temp_dir / str(task_id)
         if not task_dir.exists():
             return None
@@ -48,13 +48,22 @@ class UploadManager:
             with open(output_file, "wb") as out_f:
                 for chunk_file in chunk_files:
                     with open(chunk_file, "rb") as cf:
-                        out_f.write(cf.read())
+                        out_f.write(cf.read())                
             logger.info(f"Chunk files assembled: {output_file}")
+
+            with open(output_file, "rb") as in_f:
+                file_hash = self.GetHash(in_f)
+
+            
+            path = self.upload_dir / self.GetFileName(file_hash, mimetype)            
+            logger.debug(f"Renameing file: {path}")
+            os.rename(output_file, path)
+
 
             logger.debug(f"Deleteing chunk files")
             for chunk_file in chunk_files:
                 chunk_file.unlink()
-            return str(output_file)
+            return file_hash
         except Exception as e:
             logger.error(f"Failed to assemble files. Error: {e}")
             return None
@@ -66,16 +75,16 @@ class UploadManager:
     def GetDir(self):
         return self.upload_dir
 
-    def GetHash(self, file: FileStorage, chunk_size = 1024*1024):
+    def GetHash(self, file, chunk_size = 1024*1024):
         try:
             h = hashlib.new('sha256')
             while True:
-                data = file.stream.read(chunk_size)
+                data = file.read(chunk_size)
                 if not data:
                     break
                 h.update(data)
             hash = h.hexdigest()    
-            file.stream.seek(0)        
+            file.seek(0)        
             return hash
         except Exception as e:
             logger.warning(f"Error when generating hash: {e}")
@@ -111,7 +120,7 @@ class UploadManager:
     def FileSave(self, file : FileStorage, filename : str):
         try:            
 
-            file_hash = self.GetHash(file)
+            file_hash = self.GetHash(file.stream)
             mimetype = file.mimetype
             file_path = self.upload_dir / self.GetFileName(hash, mimetype)
             

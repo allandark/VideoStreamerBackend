@@ -16,6 +16,7 @@ services:
       MYSQL_HOST: sql-database
       MYSQL_PORT: 3306
       MYSQL_DATABASE: video_streamer
+      N_CONCURRENT_WORKERS: 4
     networks: 
       - backend
 

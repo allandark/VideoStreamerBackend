@@ -24,7 +24,7 @@ def create_app():
     """
     
     app = Flask(__name__)
-    CORS(app, supports_credentials=True, origins=["http://localhost:8080"])
+    CORS(app, supports_credentials=True, origins=["http://localhost:8080","http://localhost:5173"])
     InitLogger(app)
     logger.info("Initializing server ...")
 

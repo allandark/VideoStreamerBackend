@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.types import String, Date, DateTime
 from sqlalchemy import JSON
-from typing import List, Dict,Any
+from typing import List, Dict,Any, Optional
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
@@ -57,7 +57,6 @@ class VideoMetaDataModel(Base):
   # Relationships
   
   media: Mapped["MediaMetaDataModel"] = relationship(back_populates="video")
-  subtitles: Mapped[List["SubtitlesModel"]] = relationship(back_populates="video")
   stars: Mapped[List["StarModel"]] = relationship(
       secondary=video_star_table, 
       back_populates="videos")
@@ -158,26 +157,6 @@ class SeriesModel(Base):
             f")"))
 
 
-class SubtitlesModel(Base):
-  __tablename__ = "SUBTITLES"
-  #Columns
-  id: Mapped[int] = mapped_column(primary_key=True)
-  name: Mapped[String] = mapped_column(String(256))
-  file_path: Mapped[String] = mapped_column(String(256))
-
-  
-  # Foreign key to VideoMetaDataModel
-  video_id: Mapped[int] = mapped_column(ForeignKey("VIDEO_META_DATA.id"))
-
-  # Relationship back to parent
-  video: Mapped["VideoMetaDataModel"] = relationship(back_populates="subtitles")
-
-
-  def __repr__(self) -> str:
-    return "".join((f"SubtitlesModel(id={self.id!r}, name={self.name!r}, ",
-            f", file_path={self.file_path!r}",
-            f")"))
-
 
 class UserModel(Base):
   __tablename__ = "USER"
@@ -233,8 +212,12 @@ class MediaTaskModel(Base):
         default=dict
     )
 
-  media_id: Mapped[int] = mapped_column(ForeignKey("MEDIA_META_DATA.id"))
-  media: Mapped["MediaMetaDataModel"] = relationship("MediaMetaDataModel", back_populates="tasks")
+  media_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("MEDIA_META_DATA.id", ondelete="SET NULL"),
+        nullable=True, 
+        default=None
+        )
+  media: Mapped["MediaMetaDataModel"] = relationship("MediaMetaDataModel", back_populates="tasks",passive_deletes=True)
   def __repr__(self) -> str:
     return "".join((f"MediaTaskModel(id={self.id!r}, task_type={self.task_type!r}, ",
             f", status={self.status!r}, creation_date={self.creation_date!r}",

@@ -7,7 +7,6 @@ from datetime import datetime, date
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
-from VideoStreamAPI.db.models import SubtitlesModel
 from VideoStreamAPI.api.api_models import get_director_model, get_director_request_model
 
 

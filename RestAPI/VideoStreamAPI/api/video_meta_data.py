@@ -7,7 +7,7 @@ from datetime import datetime
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
-from VideoStreamAPI.api.api_models import get_subtitle_model, get_video_meta_data_request_model, get_video_meta_response_model
+from VideoStreamAPI.api.api_models import get_video_meta_data_request_model, get_video_meta_response_model
 from VideoStreamAPI.api.api_models import get_director_model, get_genre_model, get_star_model, get_series_model, get_video_request_parser
 
 jwt = JWTManager()
@@ -24,7 +24,6 @@ def create_api_video_meta(app_context):
     api: Namespace = Namespace("video_meta", description="Video Meta data endpoint for database tracking of videos", authorizations=authorizations)
 
     # Models
-    subtitle_model = get_subtitle_model(api)
     star_model = get_star_model(api=api, include_relationship=False)
     director_model = get_director_model(api=api, include_relationship=False)
     genre_model = get_genre_model(api=api, include_relationship=False)
@@ -81,8 +80,7 @@ def create_api_video_meta(app_context):
                 'stars': request.json['stars'],
                 'genres': request.json['genres'],
                 'directors': request.json['directors'],
-                'series': request.json['series'],
-                'subtitles': request.json['subtitles'],
+                'series': request.json['series']
             }
             video = app_context.db_context.videos.Create(data)
 

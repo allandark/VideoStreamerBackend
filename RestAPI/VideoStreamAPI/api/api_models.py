@@ -1,10 +1,6 @@
 
 from flask_restx import Namespace, Resource, fields, Model
 
-def get_subtitle_model(api):
-    return api.model('SubtitleResponseModel', {
-        'id': fields.Integer(required=True)
-        })
 
 def get_star_model(api, include_relationship=True):
     if include_relationship:
@@ -102,8 +98,7 @@ def get_series_request_model(api):
 
 
 def get_video_meta_response_model(api, include_relationship = True):
-    if include_relationship:
-        subtitle_model = get_subtitle_model(api)
+    if include_relationship:        
         star_model = get_star_model(api)
         director_model = get_director_model(api)
         genre_model = get_genre_model(api)
@@ -119,8 +114,7 @@ def get_video_meta_response_model(api, include_relationship = True):
             'screen_width': fields.Integer(),
             'screen_height': fields.Integer(),
             'rating': fields.Float(required=True),
-            'upload_date': fields.DateTime(required=True),
-            'subtitles': fields.List(fields.Nested(subtitle_model)),
+            'upload_date': fields.DateTime(required=True),            
             'stars': fields.List(fields.Nested(star_model)),
             'directors': fields.List(fields.Nested(director_model)),
             'genres': fields.List(fields.Nested(genre_model)),
@@ -131,8 +125,7 @@ def get_video_meta_response_model(api, include_relationship = True):
             'id': fields.Integer(required=True, description='Id')
             })
 
-def get_video_meta_data_request_model(api):
-    subtitle_model = get_subtitle_model(api)
+def get_video_meta_data_request_model(api):    
     star_model = get_star_model(api)
     director_model = get_director_model(api)
     genre_model = get_genre_model(api)
@@ -142,8 +135,7 @@ def get_video_meta_data_request_model(api):
         'media_id': fields.Integer(required=True),
         'description': fields.String(),
         'language': fields.String(),
-        'rating': fields.Float(),
-        'subtitles': fields.List(fields.Nested(subtitle_model)),
+        'rating': fields.Float(),        
         'stars': fields.List(fields.Nested(star_model)),
         'directors': fields.List(fields.Nested(director_model)),
         'genres': fields.List(fields.Nested(genre_model)),
@@ -190,6 +182,7 @@ def get_user_request_model(api):
 
 def get_media_task_model(api):
     return api.model('MediaTaskModel',{
+        "id": fields.Integer(required=True),
         "media_id": fields.Integer(required=True),
         "task_type": fields.String(required=True),
         "status": fields.String(required=True),
@@ -200,7 +193,7 @@ def get_media_task_model(api):
 
 def get_media_task_request_model(api):
     return api.model('MediaTaskRequestModel',{
-        "media_id": fields.Integer(required=True),
+        "media_id": fields.Integer(),
         "task_type": fields.String(required=True),
         "params": fields.Raw(description="Task parameters")
     })

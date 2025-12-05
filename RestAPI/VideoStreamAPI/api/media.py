@@ -99,9 +99,10 @@ def create_api_media(app_context):
         @api.expect(media_task_request_model)
         @api.marshal_with(media_task_model)
         def post(self):
-            media_id = request.json['media_id']
+            media_id = request.json.get('media_id', 0)
             task_type = request.json['task_type']
             params = request.json.get('params',{})
+            logger.debug(f"media_id: {media_id}, task: {task_type}, params: {params}")
 
             queue = False if task_type == TaskType.FILE_REASSEMBLY else True
             task = app_context.media_manager.AddOrUpdateTask(
@@ -163,6 +164,7 @@ def create_api_media(app_context):
                 return {"error": "Not all chunks uploaded"}, 400
             
             app_context.media_manager.AddOrUpdateTask(
+                type= task['task_type'],
                 media_id = task['media_id'],
                 task_id = task_id,
                 queue_task = True                
@@ -183,9 +185,10 @@ def create_api_media(app_context):
             if task['status'] != TaskStatus.PENDING:
                 logger.warning(f"Cannot upload chunks without a valid task")
                 return None, 400
-            app_context.media_manager.ChunkSave(task_id, chunk_index, chunk_file)
+            app_context.media_manager.uploader.ChunkSave(task_id, chunk_index, chunk_file)
             task['params']['received_chunks'][chunk_index] = True
             app_context.media_manager.AddOrUpdateTask(
+                type= task['task_type'],
                 media_id = task['media_id'],
                 task_id = task_id,
                 queue_task = False ,
