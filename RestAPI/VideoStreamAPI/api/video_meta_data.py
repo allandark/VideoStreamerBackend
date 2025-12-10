@@ -35,7 +35,7 @@ def create_api_video_meta(app_context):
     request_parser = get_video_request_parser(api)
 
 
-    @api.route('/')
+    @api.route('')
     class VideoMeta(Resource):
 
         @api.doc('Get all video meta data with filtering queries')

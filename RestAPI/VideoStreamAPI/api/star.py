@@ -26,7 +26,7 @@ def create_api_star(app_context):
     star_request_model = get_star_request_model(api)
 
 
-    @api.route('/')
+    @api.route('')
     class Star(Resource):
 
         @api.doc('Get all stars')

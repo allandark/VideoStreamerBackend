@@ -27,7 +27,7 @@ def create_api_user(app_context):
     user_request_model = get_user_request_model(api)
 
 
-    @api.route('/')
+    @api.route('')
     class User(Resource):
 
         @api.doc('Get all users')

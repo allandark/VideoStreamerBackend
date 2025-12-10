@@ -28,7 +28,7 @@ def create_api_director(app_context):
     director_request_model = get_director_request_model(api)
 
 
-    @api.route('/')
+    @api.route('')
     class Director(Resource):
 
         @api.doc('Get all directors')

@@ -1,4 +1,5 @@
 *password.txt
 __pycache__
 logs/*
-.test_venv
+.venv
+RestAPI/alembic/*.pyc

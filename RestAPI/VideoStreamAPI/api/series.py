@@ -28,7 +28,7 @@ def create_api_series(app_context):
     series_request_model = get_series_request_model(api)
 
 
-    @api.route('/')
+    @api.route('')
     class Series(Resource):
 
         @api.doc('Get all series')

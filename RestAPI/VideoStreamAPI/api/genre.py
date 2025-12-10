@@ -29,7 +29,7 @@ def create_api_genre(app_context):
     genre_request_model = get_genre_request_model(api)
 
 
-    @api.route('/')
+    @api.route('')
     class Genre(Resource):
 
         @api.doc('Get all genres')
