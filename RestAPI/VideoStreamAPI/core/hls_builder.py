@@ -33,7 +33,7 @@ class HLSBuilder:
 
     self.LOG_LENGTH = 5000
 
-  def add_video_track(self, resolution : str, exclude_audio: bool = False):
+  def add_video_track(self, resolution : str, exclude_audio: bool = False, id: int = 0):
     """Add video variant track with given resolution
 
     Args:
@@ -47,6 +47,7 @@ class HLSBuilder:
             uri = f"{self.hls_playlist_base_url}{uri}"
         variant['exclude_audio'] = exclude_audio
         variant['uri'] = uri
+        variant['track_id'] = id
         self.video_tracks.append(variant)
 
   def add_audio_track(self, name: str , language: str = "", id: int = 0):
@@ -163,7 +164,7 @@ class HLSBuilder:
       tasks[f"au_{audio_track['name']}"] = asyncio.create_task(self._build_audio_track(audio_track=audio_track, time=self.video_time))
 
     for sub_track in self.subtitle_tracks:
-      logger.indebugfo(f"Sub task: {sub_track['name']}")
+      logger.debug(f"Sub task: {sub_track['name']}")
       tasks[f"sub_{sub_track['name']}"] = asyncio.create_task(self._build_subtitle_track(subtitle_track=sub_track, time=self.video_time))
 
     logger.debug("Fire tasks")
@@ -200,7 +201,7 @@ class HLSBuilder:
       input_kwargs['t'] = time
 
     output_kwargs = {
-        "vcodec": self.video.video_tracks[0]['codec_name'],
+        "vcodec": self.video.video_tracks[video_track['track_id']]['codec_name'],
         "video_bitrate":  video_track['bandwidth_ffmpeg'],                     
         "f":"hls", 
         "hls_time": self.hls_time, 
@@ -212,7 +213,7 @@ class HLSBuilder:
       output_kwargs['an'] = None
     else:
       output_kwargs['acodec'] = "copy"
-      output_kwargs['map'] = "0:a"
+      output_kwargs['map'] = f"0:a"
 
     if self.hls_segment_base_url:
       output_kwargs['hls_base_url'] = self.hls_segment_base_url

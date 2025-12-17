@@ -31,6 +31,7 @@ class VideoMeta:
 
   def get_meta_data(self):
     try:
+      logger.debug(f"ffmpeg probe: \"{self.input_file}\"")
       probe = ffmpeg.probe(self.input_file)
       self.format['bit_rate'] = probe['format']['bit_rate']
       self.format['size'] = probe['format']['size']
@@ -122,36 +123,50 @@ class VideoManager:
       output_path.mkdir(parents=True, exist_ok=True)
 
       builder = HLSBuilder(video_data, **kwargs)
-
-      # Add video variants
-      if video_data.video_tracks[0]['height'] >= 128:        
-        builder.add_video_track("240p", exclude_audio=True)
-      if video_data.video_tracks[0]['height'] >= 480:
-        builder.add_video_track("480p", exclude_audio=True)
-      if video_data.video_tracks[0]['height'] >= 720:
-        builder.add_video_track("720p", exclude_audio=True)
-      if video_data.video_tracks[0]['height'] >= 1080:
-        builder.add_video_track("1080p", exclude_audio=True)
+      build_all = kwargs.get("build_all", False)
+      build_master =  kwargs.get("build_video", False) or\
+                      kwargs.get("build_audio", False) or\
+                      kwargs.get("build_subtitle", False)
       
-      if len(builder.video_tracks) == 0:
-        logger.error(f"Video has no valid video tracks")
-        return False
+      # Build video variants
+      if kwargs.get("build_video", False) or build_all:
+        track_configs = kwargs.get("video_tracks", [])
+        for track in track_configs:
+          stream_id = track.get("track_stream_index", 0)
+          builder.add_video_track(
+            track.get("name"), exclude_audio=True, id=stream_id)
+        
+        if len(builder.video_tracks) == 0:
+          logger.error(f"Video has no valid video tracks")
+          return False
 
       # Build audio tracks
-      for track in video_data.audio_tracks:
-        builder.add_audio_track(name = "English", id=track['track_id'])
+      if kwargs.get("build_audio", False) or build_all:
+        track_configs = kwargs.get("audio_tracks", [])
+        for track in track_configs:
+          stream_id = track.get("track_stream_index")
+          builder.add_audio_track(
+            name=track.get("name"), language=track.get("language"),
+            exclude_audio=True, id=stream_id)
 
-      for track in video_data.subtitle_tracks:
-        builder.add_subtitle_track(name = "English", id=track['track_id'])
+      if kwargs.get("build_subtitle", False) or build_all:
+        track_configs = kwargs.get("subtitle_tracks", [])
+        for track in track_configs:
+          stream_id = track.get("track_stream_index")
+          # TODO: add external sub file
+          builder.add_subtitle_track(
+            name=track.get("name"), language=track.get("language"),
+            exclude_audio=True, id=stream_id)
+          
 
       # Create thumbnail
-      gen_thumbnail: bool = kwargs.get("thumbnail", True)      
-      if gen_thumbnail:
+      if kwargs.get("build_thumbnail", False) or build_all:
         thumbnail_width: bool = kwargs.get("thumbnail_width", 240)
         thumbnail_time: bool = kwargs.get("thumbnail_time", 10)
         builder.add_thumbnail(time=thumbnail_time, width=thumbnail_width)
 
-      builder.add_master()
+      if build_master or build_all:
+        builder.add_master()
 
       res = builder.build()
       return res
@@ -161,6 +176,7 @@ class VideoManager:
 
   def LoadData(self, input_file):
     input_dir = self.upload_dir / input_file
+    logger.debug(f"Loading video: {input_dir}")
     vid = VideoMeta(input_dir, self.output_dir)
     return vid
 

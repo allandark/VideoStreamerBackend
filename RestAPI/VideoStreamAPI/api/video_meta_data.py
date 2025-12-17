@@ -40,7 +40,7 @@ def create_api_video_meta(app_context):
 
         @api.doc('Get all video meta data with filtering queries')
         @api.expect(request_parser)
-        @api.marshal_list_with(video_meta_response_model)
+        @api.marshal_list_with(video_meta_response_model, code=200)
         # TODO: add filtering
         def get(self):
             args = request_parser.parse_args()
@@ -63,24 +63,21 @@ def create_api_video_meta(app_context):
      
             file_name =  app_context.media_manager.uploader.GetFileName(media['hash'], media['mimetype'])
             meta_data = app_context.media_manager.video_manager.LoadData(file_name)
-
-            file_name_no_ext = str(file_name).split('.')[0]
+            
             upload_date = datetime.now().isoformat()
             data = {
-                'title': request.json['title'],
+                'title': request.json['title'],                                                
+                'description': request.json['description'],                
+                'duration_seconds': meta_data.format['duration'],                       
+                'views': 0,                
+                'rating': request.json['rating'],                                                
+                'upload_date' : upload_date,                     
                 'media_id': media_id,
-                'description': request.json['description'],
-                'file_path': file_name_no_ext,
-                'upload_date' : upload_date,            
-                'duration_seconds': meta_data.format['duration'],
-                'screen_width' : meta_data.video_tracks[0]['width'],
-                'screen_height' : meta_data.video_tracks[0]['height'],
-                'rating': request.json['rating'],
-                'language': request.json['language'],
                 'stars': request.json['stars'],
                 'genres': request.json['genres'],
                 'directors': request.json['directors'],
-                'series': request.json['series']
+                'series': request.json['series'],
+                'tags': request.json['tags']
             }
             video = app_context.db_context.videos.Create(data)
 
@@ -90,7 +87,7 @@ def create_api_video_meta(app_context):
     @api.route('/<int:id>')
     class VideoMetaID(Resource):
         @api.doc('Get video meta data by id')
-        @api.marshal_with(video_meta_response_model)
+        @api.marshal_with(video_meta_response_model, code=200)
         def get(self, id):
             video = app_context.db_context.videos.Get(id)
             if video is None:
@@ -101,7 +98,7 @@ def create_api_video_meta(app_context):
 
         @api.doc('Update video meta data with id')
         @api.expect(video_meta_response_model)
-        @api.marshal_with(video_meta_response_model)
+        @api.marshal_with(video_meta_response_model, code=200)
         def put(self, id):
             video = app_context.db_context.videos.Get(id)
             if video is None:

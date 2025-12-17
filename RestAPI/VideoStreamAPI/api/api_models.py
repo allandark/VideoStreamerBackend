@@ -85,6 +85,20 @@ def get_series_model(api, include_relationship=True):
         return api.model('SeriesResponseModel', {
             'id': fields.Integer(required=True)
         })
+    
+def get_tags_model(api, include_relationship=True):
+    if include_relationship:
+        videos = get_video_meta_response_model(api=api, include_relationship=False)
+        return api.model('SeriesResponseModel', {
+            'id': fields.Integer(required=True),
+            'name': fields.String(required=True),
+            'videos' : fields.List(fields.Nested(videos))
+        })
+    else:
+        return api.model('SeriesResponseModel', {
+            'id': fields.Integer(required=True)
+        })
+
 
 
 def get_series_request_model(api):
@@ -103,22 +117,21 @@ def get_video_meta_response_model(api, include_relationship = True):
         director_model = get_director_model(api)
         genre_model = get_genre_model(api)
         series_model = get_series_model(api)
+        tags_model = get_tags_model(api)
         return api.model('VideoMetaResponseModel', {
             'id': fields.Integer(required=True, description='Id'),
             'title': fields.String(required=True),
-            'description': fields.String(),
-            'file_path': fields.String(required=True),
-            'language': fields.String(required=True),
+            'description': fields.String(required=True),            
             'duration_seconds': fields.Float(required=True),
-            'media_id': fields.Integer(required=True),
-            'screen_width': fields.Integer(),
-            'screen_height': fields.Integer(),
+            'views': fields.Integer(required=True),
             'rating': fields.Float(required=True),
-            'upload_date': fields.DateTime(required=True),            
+            'upload_date': fields.DateTime(required=True),
+            'media_id': fields.Integer(required=True),                        
             'stars': fields.List(fields.Nested(star_model)),
             'directors': fields.List(fields.Nested(director_model)),
             'genres': fields.List(fields.Nested(genre_model)),
             'series': fields.List(fields.Nested(series_model)),
+            'tags': fields.List(fields.Nested(tags_model))
             })
     else:
         return api.model('VideoMetaResponseModel', {
@@ -130,16 +143,17 @@ def get_video_meta_data_request_model(api):
     director_model = get_director_model(api)
     genre_model = get_genre_model(api)
     series_model = get_series_model(api)
+    tags_model = get_tags_model(api)
     return api.model('VideoMetaDataRequestModel',{
         'title' : fields.String(required=True),
         'media_id': fields.Integer(required=True),
-        'description': fields.String(),
-        'language': fields.String(),
+        'description': fields.String(),        
         'rating': fields.Float(),        
         'stars': fields.List(fields.Nested(star_model)),
         'directors': fields.List(fields.Nested(director_model)),
         'genres': fields.List(fields.Nested(genre_model)),
-        'series': fields.List(fields.Nested(series_model))
+        'series': fields.List(fields.Nested(series_model)),
+        'tags': fields.List(fields.Nested(tags_model))
     })
 
 def get_video_request_parser(api):

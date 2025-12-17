@@ -7,6 +7,8 @@ erDiagram
 
     VIDEO_META_DATA ||--|| MEDIA_META_DATA : has
 
+    VIDEO_TAG ||--o{ TAG : descripes
+    VIDEO_TAG ||--o{ VIDEO_META_DATA : descripes
 
     VIDEO_STAR ||--o{ STAR : features
     VIDEO_STAR ||--o{ VIDEO_META_DATA : features
@@ -23,14 +25,12 @@ erDiagram
     VIDEO_META_DATA{
         int id PK
         int media_id FK
-        string title
-        string file_path
-        string langauge
-        int duration_seconds
-        int width
-        int height        
+        string title    
+        string description     
+        int duration_seconds     
         float rating
-        date upload_date
+        int views
+        date upload_date        
     }
 
     MEDIA_META_DATA{
@@ -39,6 +39,11 @@ erDiagram
         string name
         string hash  
         string mimetype
+        bool master_file
+        json video_tracks 
+        json audio_tracks 
+        json subtitle_tracks 
+        bool thumbnail
     }
 
 
@@ -62,7 +67,18 @@ erDiagram
 
     GENRE{
         int id PK
-        string name  
+        string name 
+        float rating 
+    }
+
+    TAG{
+        int id PK
+        string name 
+    }
+
+    VIDEO_TAG{
+        int video_id FK
+        int tag_id FK
     }
 
 
@@ -93,9 +109,9 @@ erDiagram
 
     USER{
         int id PK
-        string user_name
+        string hashed_user_name
         string hashed_password
-        string email
+        string hashed_email
         string type
         date creation_date
     }

@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey, Table, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 from sqlalchemy.ext.mutable import MutableDict
-from sqlalchemy.types import String, Date, DateTime
+from sqlalchemy.types import String,  DateTime, JSON, Boolean
 from sqlalchemy import JSON
 from typing import List, Dict,Any, Optional
 import logging
@@ -10,7 +10,7 @@ logger : logging.Logger = logging.getLogger("app")
 class Base(DeclarativeBase):
   pass
 
-# Assosiation tables
+# Association/join tables
 video_star_table = Table(
     "VIDEO_STAR",
     Base.metadata,
@@ -39,20 +39,25 @@ video_series_table = Table(
     Column("series_id", ForeignKey("SERIES.id"), primary_key=True),
 )
 
+video_tag_table = Table(
+    "VIDEO_TAGS",
+    Base.metadata,
+    Column("media_id", ForeignKey("VIDEO_META_DATA.id"), primary_key=True),
+    Column("tag_id", ForeignKey("TAG.id"), primary_key=True),
+)
+
 
 class VideoMetaDataModel(Base):
   __tablename__ = "VIDEO_META_DATA"
   #Columns
   id: Mapped[int] = mapped_column(primary_key=True)
-  title: Mapped[String] = mapped_column(String(256))
-  file_path: Mapped[String] = mapped_column(String(256))
-  language: Mapped[String] = mapped_column(String(256))
-  description: Mapped[String] = mapped_column(String(512))
+  title: Mapped[String] = mapped_column(String(256))    
+  description: Mapped[String] = mapped_column(String(1024))
   duration_seconds: Mapped[int] 
-  screen_width: Mapped[int] 
-  screen_height: Mapped[int] 
+  views: Mapped[int]
   rating: Mapped[float] 
   upload_date: Mapped[DateTime] = mapped_column(DateTime())
+
   media_id: Mapped[int] = mapped_column(ForeignKey("MEDIA_META_DATA.id"), unique=True)
   # Relationships
   
@@ -71,6 +76,10 @@ class VideoMetaDataModel(Base):
 
   series: Mapped[List["SeriesModel"]] = relationship(
       secondary=video_series_table, 
+      back_populates="videos")
+  
+  tags: Mapped[List["TagModel"]] = relationship(
+      secondary=video_tag_table, 
       back_populates="videos")
     
   def __repr__(self) -> str:
@@ -157,7 +166,6 @@ class SeriesModel(Base):
             f")"))
 
 
-
 class UserModel(Base):
   __tablename__ = "USER"
   #Columns
@@ -174,6 +182,16 @@ class UserModel(Base):
             f")"))
   
 
+class TagModel(Base):
+  __tablename__ = "TAG"
+  id: Mapped[int] = mapped_column(primary_key=True)
+  name: Mapped[String] = mapped_column(String(256))
+
+  videos: Mapped[List["VideoMetaDataModel"]] = relationship(
+    secondary=video_tag_table, 
+    back_populates="tags"
+  )
+
 
 class MediaMetaDataModel(Base):
   __tablename__ = "MEDIA_META_DATA"
@@ -182,6 +200,11 @@ class MediaMetaDataModel(Base):
   hash: Mapped[String] = mapped_column(String(64))
   name: Mapped[String] = mapped_column(String(256))
   mimetype: Mapped[String] = mapped_column(String(64))
+  master_file: Mapped[Boolean] = mapped_column(Boolean, nullable=False, default=False)
+  video_tracks: Mapped[JSON] = mapped_column(JSON, nullable=False, default=dict)
+  audio_tracks: Mapped[JSON] = mapped_column(JSON, nullable=False, default=dict)
+  subtitle_tracks: Mapped[JSON] = mapped_column(JSON, nullable=False, default=dict)
+  thumbnail: Mapped[Boolean] =  mapped_column(Boolean, default=False)
   
   # Relationships
   
@@ -196,7 +219,6 @@ class MediaMetaDataModel(Base):
     return "".join((f"MediaMetaDataModel(id={self.id!r}, hash={self.hash!r}, ",
             f", name={self.name!r}, mimetype={self.mimetype!r}",
             f")"))
-
 
 
 class MediaTaskModel(Base):

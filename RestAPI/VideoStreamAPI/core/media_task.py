@@ -1,0 +1,264 @@
+import abc
+from datetime import datetime
+import logging
+logger : logging.Logger = logging.getLogger("app")
+
+class TaskStatus:
+    PENDING = "pending"
+    RUNNING = "running"
+    DONE = "done"
+    ERROR = "error"
+
+class TaskType:
+    HLS_BUILD = "hls_build"
+    FILE_REASSEMBLY = "upload_chunked"
+
+class ITask(metaclass=abc.ABCMeta):
+
+  INVALID_TASK_ID = -1
+
+  @classmethod
+  def __subclasshook__(cls, subclass):
+    return (hasattr(subclass, 'Start') and callable(subclass.Start) and 
+            hasattr(subclass, 'Update') and callable(subclass.Update) and
+            hasattr(subclass, 'Execute') and callable(subclass.Execute) and
+            hasattr(subclass, 'type') and hasattr(subclass, 'status') or
+            NotImplemented)
+  
+  @abc.abstractmethod
+  def Start(self,**kvargs):
+     raise NotImplemented
+  
+  @abc.abstractmethod
+  def Update(self):
+     raise NotImplemented
+  
+  @abc.abstractmethod
+  def Execute(self):
+     raise NotImplemented
+  
+  def CreateTask(type : TaskType, **kwargs):
+    match type:
+      case TaskType.HLS_BUILD:
+        return HLSTask( media_id = kwargs.get('media_id'), 
+                params = kwargs.get('params'),
+                db = kwargs.get('db'),
+                video_manager = kwargs.get('video_manager'),
+                uploader = kwargs.get('uploader'),
+                task_id = kwargs.get('task_id'))
+      
+      case TaskType.FILE_REASSEMBLY:
+        return FileReassemblyTask( media_id = kwargs.get('media_id'), 
+                params = kwargs.get('params'),
+                db = kwargs.get('db'),
+                video_manager = kwargs.get('video_manager'),
+                uploader = kwargs.get('uploader'),
+                task_id = kwargs.get('task_id'))
+      case _:
+        return None
+
+class HLSTask(ITask):
+ 
+
+  def __init__(self, **kwargs):
+    super().__init__()
+    self.db = kwargs.get("db", None)
+    self.vm = kwargs.get('video_manager', None)
+    self.up = kwargs.get('uploader', None)
+    task_id = kwargs.get('task_id', None)
+    if task_id is None:
+      self.id = self.INVALID_TASK_ID
+      self.type = TaskType.HLS_BUILD
+      self.status = TaskStatus.PENDING
+      creation_date = datetime.now().isoformat()     
+      self.data = {
+        "status": self.status,
+        "task_type": self.type,
+        "media_id": kwargs.get("media_id", 0),
+        "error_message": "",
+        "creation_date": creation_date,
+        "params": kwargs.get("params", "")
+      }
+    else:
+      self.data = self.db.tasks.get(task_id)
+      self.id = task_id
+      self.type = TaskType.FILE_REASSEMBLY  
+      self.status = self.data['status']
+
+
+  def Start(self):
+     if self.data['media_id'] == 0:
+        msg = f"hls_build cannot have undefined media_id. Aborting task"        
+        self._error(msg)
+        return False
+     
+     self.data = self.db.tasks.Create(self.data)
+     self.id = self.data["id"]
+     logger.info(f"Created new Media task: {self.data}")
+     return True
+  
+  def Update(self, **kwargs):
+    self.data = self.db.tasks.Get( kwargs.get('task_id'))
+    if self.data is None:
+      return None
+    self.data['params'].update(kwargs.get("param"))
+    self.data = self.db.tasks.Update(self.data)
+    logger.info(f"Updated Media task: {self.data}")
+    return self.data
+
+  
+  def Execute(self):
+    self.data = self.db.tasks.Get(self.id)
+    self.status = TaskStatus.RUNNING
+    self.data["status"] = self.status
+    self.db.tasks.Update(self.data)
+
+    logger.info(f"Executing task: {self.data}")
+    media = self.db.media.Get(self.data["media_id"])
+    
+    file_name = self.up.GetFileName(media['hash'], media['mimetype'])    
+    try:
+      meta_data = self.vm.LoadData(file_name)
+    except Exception as e:
+      msg = f"Could not load media file: \"{file_name}\". Error: {e}"      
+      meta_data = None
+      self._error(msg)
+    if meta_data is None:      
+      return
+
+    if self.vm.DirExists(media['hash']):
+      self.vm.DirRemove(media['hash'])
+
+    res = self.vm.CreateHls(meta_data,media['hash'], **self.data['params'])
+
+    if not res.get('build_status', False):        
+        self._error("Failed to complete hls build task")
+    else:        
+
+        if self.data['params'].get("build_video", False):          
+          media['video_tracks'] = self.data['params'].get('video_tracks', [])
+          media['master'] = True
+
+        if self.data['params'].get("build_audio", False):          
+          media['audio_tracks'] =  self.data['params'].get('audio_tracks', [])
+          media['master'] = True
+
+        if self.data['params'].get("build_subtitle", False):                      
+          media['subtitle_tracks'] = self.data['params'].get('subtitle_tracks', [])
+          media['master'] = True
+        
+        if self.data['params'].get("build_thumbnail", False):                                    
+          media['thumbnail'] = True
+
+        self.db.media.Update(media)
+        logger.info(f"Task completed: {self.data}")
+        self.data['status'] = TaskStatus.DONE
+        self.status = TaskStatus.DONE
+        self.db.tasks.Update(self.data)
+
+  def _error(self, msg: str):
+     logger.error(msg)
+     self.data['error_message'] = msg
+     self.status = TaskStatus.ERROR
+     self.data['status'] = self.status
+     self.data = self.db.tasks.Update(self.data)
+        
+
+
+class FileReassemblyTask(ITask):
+  def __init__(self,  **kwargs):
+    super().__init__()
+    self.db = kwargs.get("db", None)
+    self.vm = kwargs.get('video_manager', None)
+    self.up = kwargs.get('uploader', None)
+
+    task_id = kwargs.get('task_id', None)
+    if task_id is None:
+      self.id = self.INVALID_TASK_ID
+      self.status = TaskStatus.PENDING
+      creation_date = datetime.now().isoformat()     
+      self.type = TaskType.FILE_REASSEMBLY    
+      self.data = {
+        "status": self.status,
+        "task_type": self.type,
+        "media_id": kwargs.get("media_id", 0),
+        "error_message": "",
+        "creation_date": creation_date,
+        "params": kwargs.get("params", "")
+      }
+    else:
+      self.data = self.db.tasks.Get(task_id)
+      self.id = task_id
+      self.type = TaskType.FILE_REASSEMBLY  
+      self.status = self.data['status']
+
+
+  def Start(self):
+    if self.data['media_id'] == 0 and 'mimetype' in self.data['params']:
+      hash = self.data['params'].get('hash', "")
+      mimetype =  self.data['params']['mimetype']
+      if not self.up.FileExists(hash, mimetype):
+        # Create new media model
+        media = self.db.media.Create({
+          "name": self.data['params'].get('file_name', "DefaultMediaName"),
+          "hash": hash,
+          "mimetype" : mimetype
+        })
+
+        self.data['media_id'] = media['id']
+        logger.debug(f"Media created: {self.data['media_id']}")
+      else:        
+        self.data['media_id'] = None
+        self._error(f"Media file already exists: {self.up.GetFileName(hash, mimetype)}")
+        return False
+        
+    else:
+      self.data['media_id'] = None
+      self._error(f"Failed to create media for task: {self.data}")     
+      return False
+      
+
+    if  'file_name' in self.data['params'] or\
+        'chunk_size' in self.data['params'] or\
+        'chunk_count' in self.data['params']:
+      self.data['params']['received_chunks'] = {}
+    else:
+      self._error("Wrong params provided. Task requires: \"file_name\", \"chunk_size\", \"chunk_count\"")
+      return False
+    self.data = self.db.tasks.Create(self.data)
+    self.id = self.data["id"]
+    logger.info(f"Created new Media task: {self.data}")
+    return True
+  
+
+  def Update(self, **kwargs):
+    self.data['params'].update(kwargs.get("params"))
+    self.data = self.db.tasks.Update(self.data)
+    logger.info(f"Updated Media task: {self.data}")
+    return self.data
+  
+
+  def Execute(self):
+    self.data = self.db.tasks.Get(self.id)
+    self.status = TaskStatus.RUNNING
+    self.data['status'] = self.status
+    self.db.tasks.Update(self.data)
+    logger.info(f"Starting task: {self.data}")
+    media = self.db.media.Get(self.data["media_id"])
+    hash = self.up.ChunkAssemble(self.data["id"], media['mimetype'])
+    if hash is None:      
+      self._error(f"failed to assemble file: {self.data['file_name']}")
+      
+    else:
+        media['hash'] = hash
+        self.status = TaskStatus.DONE
+        self.data['status'] = self.status
+        self.db.media.Update(media)
+        self.db.tasks.Update(self.data)
+
+  def _error(self, msg: str):
+    logger.error(msg)
+    self.data['error_message'] = msg
+    self.status = TaskStatus.ERROR
+    self.data['status'] = self.status
+    self.data = self.db.tasks.Update(self.data)
