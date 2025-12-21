@@ -1,12 +1,12 @@
 from flask_restx import Namespace, Resource, fields, Model
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
-from flask import send_file, send_from_directory,request
+from flask import send_from_directory,request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 from VideoStreamAPI.api.api_models import get_media_task_model, get_media_task_request_model
-from VideoStreamAPI.core.media_manager import TaskType, TaskStatus
+from VideoStreamAPI.core.media_task import TaskType, TaskStatus
 
 import logging
 logger : logging.Logger = logging.getLogger("app")
@@ -146,14 +146,26 @@ def create_api_media(app_context):
         
         @api.doc(description="Delete media by id from database")
         def delete(self, id):
-            task = app_context.db_context.media.Get(id)
-            if task is None:
+            media = app_context.db_context.media.Get(id)
+            if media is None:
                 return None, 404
             res = app_context.db_context.media.Delete(id)
             if not res:
                 return {"error": "could not delete media"}, 500
             return {"message": "media deleted successfully"}, 200
 
+
+    @api.route('/meta/<int:id>')
+    class MediaMetaId(Resource):
+        @api.doc('Get FFMPEG video meta data for media with id')        
+        def get(self, id):
+            media = app_context.db_context.media.Get(id)
+            if media is None:
+                return None, 404
+            file_name = app_context.media_manager.uploader.GetFileName(media['hash'], media['mimetype'])  
+            meta_data = app_context.media_manager.video_manager.LoadData(file_name)
+            return meta_data.to_dict(), 200
+            
 
     @api.route('/upload/chunk_complete')
     class UploadChunkComplete(Resource):

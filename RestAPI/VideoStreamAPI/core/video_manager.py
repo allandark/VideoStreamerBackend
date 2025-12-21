@@ -27,7 +27,13 @@ class VideoMeta:
 
     self.get_meta_data()
     
-
+  def to_dict(self):
+    return {
+      "format" : self.format,
+      "video_tracks": self.video_tracks,
+      "audio_tracks": self.audio_tracks,
+      "subtitle_tracks": self.subtitle_tracks
+    }
 
   def get_meta_data(self):
     try:
@@ -49,7 +55,7 @@ class VideoMeta:
           video_track['codec_long_name'] = stream['codec_long_name']
           video_track['width'] = stream['width']
           video_track['height'] = stream['height']
-          video_track['display_aspect_ratio'] = stream['display_aspect_ratio']
+          video_track['display_aspect_ratio'] = stream.get('display_aspect_ratio','Unknown')
           video_track['avg_frame_rate'] = stream['avg_frame_rate']
           video_track['duration'] = stream['duration']
           video_track['track_id'] = video_track_id
@@ -147,7 +153,7 @@ class VideoManager:
           stream_id = track.get("track_stream_index")
           builder.add_audio_track(
             name=track.get("name"), language=track.get("language"),
-            exclude_audio=True, id=stream_id)
+            id=stream_id)
 
       if kwargs.get("build_subtitle", False) or build_all:
         track_configs = kwargs.get("subtitle_tracks", [])
@@ -156,7 +162,7 @@ class VideoManager:
           # TODO: add external sub file
           builder.add_subtitle_track(
             name=track.get("name"), language=track.get("language"),
-            exclude_audio=True, id=stream_id)
+            id=stream_id)
           
 
       # Create thumbnail

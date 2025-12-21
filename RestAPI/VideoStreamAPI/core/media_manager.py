@@ -6,7 +6,7 @@ from queue import Queue
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
-from VideoStreamAPI.core.media_task import FileReassemblyTask, HLSTask, TaskType, TaskStatus, ITask
+from VideoStreamAPI.core.media_task import TaskStatus, ITask
 from VideoStreamAPI.core.upload_manager import UploadManager
 from VideoStreamAPI.core.video_manager import VideoManager
 
