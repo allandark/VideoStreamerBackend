@@ -5,6 +5,17 @@ logger : Logger = logging.getLogger("app")
 
 
 def model_to_dict(obj, include_relationships=False, session=None, visited=None):
+    """ Converts sql alchemy model to python dict
+
+    Args:
+        obj (Object): sql alchemy model to convert
+        include_relationships (bool, optional): recursive relations. Defaults to False.
+        session (Session, optional): db sql orm session. Defaults to None.
+        visited (bool, optional): object is visited (to prevent deadlock). Defaults to None.
+
+    Returns:
+        dict: dict representation of model
+    """
     if visited is None:
         visited = set()
     if id(obj) in visited:
@@ -13,11 +24,7 @@ def model_to_dict(obj, include_relationships=False, session=None, visited=None):
 
     result = {}
     for c in obj.__table__.columns:
-        val = getattr(obj, c.key)
-        # if isinstance(val, datetime.date):
-        #     val = val.isoformat() 
-        # if isinstance(val, datetime.datetime):
-        #     val = val.isoformat()   
+        val = getattr(obj, c.key)  
         result[c.key] = val
 
     # Relationships
@@ -38,6 +45,18 @@ def model_to_dict(obj, include_relationships=False, session=None, visited=None):
     return result
 
 def from_dict(obj, data: dict, session, visited=None, include_relationships=True):
+    """ Creates a sql alchemy model from a dict
+
+    Args:
+        obj (Object): object instance
+        data (dict): dict to convert
+        session (_type_): orm session
+        visited (_type_, optional): has object/node been visited?. Defaults to None.
+        include_relationships (bool, optional): recursive relationship. Defaults to True.
+
+    Returns:
+        Object: sql orm object model
+    """
 
     if visited is None:
         visited = set()

@@ -3,6 +3,10 @@ from datetime import datetime
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
+from VideoStreamAPI.db.db_context import DatabaseContext 
+from VideoStreamAPI.core.video_manager import VideoManager
+from VideoStreamAPI.core.upload_manager import UploadManager
+
 class TaskStatus:
     PENDING = "pending"
     RUNNING = "running"
@@ -14,6 +18,9 @@ class TaskType:
     FILE_REASSEMBLY = "upload_chunked"
 
 class ITask(metaclass=abc.ABCMeta):
+  """ _summary_\n
+  Interface for media tasks ensuring common class pattern
+  """
 
   INVALID_TASK_ID = -1
 
@@ -38,6 +45,14 @@ class ITask(metaclass=abc.ABCMeta):
      raise NotImplemented
   
   def CreateTask(type : TaskType, **kwargs):
+    """ _summary_\n
+    Static method for instantiating task object
+    Args:
+        type (TaskType): Task type 
+
+    Returns:
+        (ITask|None): Task handle or None
+    """
     match type:
       case TaskType.HLS_BUILD:
         return HLSTask( media_id = kwargs.get('media_id'), 
@@ -58,14 +73,25 @@ class ITask(metaclass=abc.ABCMeta):
         return None
 
 class HLSTask(ITask):
- 
+  """ Implementation of HLS Task for building hls files and other ffmpeg related operations
+  """
 
   def __init__(self, **kwargs):
+    """ _summary_\n
+    Initializes the HLS task object.
+    Args:
+      db (DatabaseContext): Reference to db context
+      video_manager (VideoManager): Reference to video manager
+      uploader (UploadManager): Reference to upload manager
+      task_id (int): task db id
+      media_id (int): media db id
+      params (dict): params for hls builder
+    """
     super().__init__()
-    self.db = kwargs.get("db", None)
-    self.vm = kwargs.get('video_manager', None)
-    self.up = kwargs.get('uploader', None)
-    task_id = kwargs.get('task_id', None)
+    self.db: DatabaseContext|None = kwargs.get("db", None)
+    self.vm: VideoManager|None = kwargs.get('video_manager', None)
+    self.up: UploadManager|None = kwargs.get('uploader', None)
+    task_id: int|None = kwargs.get('task_id', None)
     if task_id is None:
       self.id = self.INVALID_TASK_ID
       self.type = TaskType.HLS_BUILD
@@ -80,24 +106,37 @@ class HLSTask(ITask):
         "params": kwargs.get("params", "")
       }
     else:
-      self.data = self.db.tasks.get(task_id)
-      self.id = task_id
-      self.type = TaskType.FILE_REASSEMBLY  
-      self.status = self.data['status']
+      self.data: dict = self.db.tasks.get(task_id)
+      self.id: int = task_id
+      self.type: TaskType = TaskType.FILE_REASSEMBLY  
+      self.status: TaskStatus = self.data['status']
 
 
   def Start(self):
-     if self.data['media_id'] == 0:
-        msg = f"hls_build cannot have undefined media_id. Aborting task"        
-        self._error(msg)
-        return False
-     
-     self.data = self.db.tasks.Create(self.data)
-     self.id = self.data["id"]
-     logger.info(f"Created new Media task: {self.data}")
-     return True
+    """ _summary_\n
+    Creates a media task on database
+    Returns:
+        bool: true if task is created
+    """
+    if self.data['media_id'] == 0:
+      msg = f"hls_build cannot have undefined media_id. Aborting task"        
+      self._error(msg) # TODO: task is not created yet on db
+      return False
+    
+    self.data = self.db.tasks.Create(self.data)
+    self.id = self.data["id"]
+    logger.info(f"Created new Media task: {self.data}")
+    return True
   
   def Update(self, **kwargs):
+    """ _summary_\n
+    Update existing media task with kwargs
+    Args:
+        task_id (int): task id
+        params (dict): params to update
+    Returns:
+        (dict|None): updated task model
+    """
     self.data = self.db.tasks.Get( kwargs.get('task_id'))
     if self.data is None:
       return None
@@ -108,6 +147,9 @@ class HLSTask(ITask):
 
   
   def Execute(self):
+    """ _summary_\n
+    Executes the hls build task with to be offloaded to worker thread
+    """
     self.data = self.db.tasks.Get(self.id)
     self.status = TaskStatus.RUNNING
     self.data["status"] = self.status
@@ -166,11 +208,23 @@ class HLSTask(ITask):
 
 
 class FileReassemblyTask(ITask):
+  """ Implementation of task for chunked file upload
+  """
   def __init__(self,  **kwargs):
+    """ _summary_\n
+    Initialize FileReassemblyTask.
+    Args:
+      db (DatabaseContext):
+      video_manager (VideoManager):
+      uploader (UploadManager): 
+      task_id (int): 
+      media_id (int): 
+      params (dict):
+    """
     super().__init__()
-    self.db = kwargs.get("db", None)
-    self.vm = kwargs.get('video_manager', None)
-    self.up = kwargs.get('uploader', None)
+    self.db: DatabaseContext|None = kwargs.get("db", None)
+    self.vm: VideoManager|None = kwargs.get('video_manager', None)
+    self.up: UploadManager|None = kwargs.get('uploader', None)
 
     task_id = kwargs.get('task_id', None)
     if task_id is None:
@@ -194,6 +248,11 @@ class FileReassemblyTask(ITask):
 
 
   def Start(self):
+    """ _summary_\n
+    Start chunked file upload task and creates database entry
+    Returns:
+        bool: true if task created successfully
+    """
     if self.data['media_id'] == 0 and 'mimetype' in self.data['params']:
       hash = self.data['params'].get('hash', "")
       mimetype =  self.data['params']['mimetype']
@@ -232,6 +291,11 @@ class FileReassemblyTask(ITask):
   
 
   def Update(self, **kwargs):
+    """ _summary_\n
+    Update running file upload task
+    Returns:
+        (dict): task model
+    """
     self.data['params'].update(kwargs.get("params"))
     self.data = self.db.tasks.Update(self.data)
     logger.info(f"Updated Media task: {self.data}")
@@ -239,6 +303,9 @@ class FileReassemblyTask(ITask):
   
 
   def Execute(self):
+    """ _summary_\n
+    Executes task on worker thread. Assembles file segments and updates database
+    """
     self.data = self.db.tasks.Get(self.id)
     self.status = TaskStatus.RUNNING
     self.data['status'] = self.status
@@ -250,11 +317,11 @@ class FileReassemblyTask(ITask):
       self._error(f"failed to assemble file: {self.data['file_name']}")
       
     else:
-        media['hash'] = hash
-        self.status = TaskStatus.DONE
-        self.data['status'] = self.status
-        self.db.media.Update(media)
-        self.db.tasks.Update(self.data)
+      media['hash'] = hash
+      self.status = TaskStatus.DONE
+      self.data['status'] = self.status
+      self.db.media.Update(media)
+      self.db.tasks.Update(self.data)
 
   def _error(self, msg: str):
     logger.error(msg)

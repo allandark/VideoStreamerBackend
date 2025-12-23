@@ -6,6 +6,9 @@ logger : logging.Logger = logging.getLogger("app")
 
 
 class HLSBuilder:
+  """_summary_
+  Builder class for creating hls files with different configurations encapsulating ffmpeg
+  """
 
   def __init__(self, video, **kwargs):
 
@@ -34,7 +37,8 @@ class HLSBuilder:
     self.LOG_LENGTH = 5000
 
   def add_video_track(self, resolution : str, exclude_audio: bool = False, id: int = 0):
-    """Add video variant track with given resolution
+    """ _summary_\n
+    Add video variant track with given resolution
 
     Args:
         resolution (str): resolution name: \"240p\", \"480p\", \"720p\", \"1080p\"
@@ -51,7 +55,8 @@ class HLSBuilder:
         self.video_tracks.append(variant)
 
   def add_audio_track(self, name: str , language: str = "", id: int = 0):
-    """Add audio track
+    """ _summary_\n
+    Add audio track
 
     Args:
         name (str): track name
@@ -86,7 +91,8 @@ class HLSBuilder:
         })
 
   def add_subtitle_track(self, name: str , language: str = "", id: int = 0, file: str | None = None):
-    """Add subtitle track to video
+    """ _summary_\n
+    Add subtitle track to video
 
     Args:
         name (str): name of track
@@ -136,11 +142,22 @@ class HLSBuilder:
     self.thumbnail['width'] = width
 
   def add_master(self, file_name = "master"):
+    """ _summary_\n
+    Adds master playlist file to be build
+
+    Args:
+        file_name (str, optional): _description_. Defaults to "master".
+    """
     if 'file_name' in self.master:
       return
     self.master['file_name'] = file_name
 
   def build(self):
+    """ _summary_\n
+    Performs the build with the current configuration provided by the previous add commands
+    Returns:
+        res (dict[str, any])': _description_. Dictionary containing status and configuration data
+    """
     result = asyncio.run(self.build_async())
     return result
     

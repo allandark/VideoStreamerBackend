@@ -1,9 +1,7 @@
-
 from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import URL
 import os
-import datetime
 import logging
 logger : logging.Logger = logging.getLogger("app")
 
@@ -13,6 +11,11 @@ from VideoStreamAPI.db.services.crud import CrudService
 
 
 def load_pw_file():
+    """ reads mysql password file and returns the content
+
+    Returns:
+        str|None: sql password
+    """
     file_path = os.getenv("MYSQL_ROOT_PASSWORD_FILE") 
     logger.debug(f"Reading file: {file_path}")
     with open(file_path) as f:
@@ -21,7 +24,14 @@ def load_pw_file():
     return None
 
 class DatabaseContext:
+    """ Database context 
+    """
     def __init__(self, create_tables: bool = False ):
+        """ Initialize db context. Extract credentials, build connection string, connect to db.
+
+        Args:
+            create_tables (bool, optional): create db tables if they dont exist. Defaults to False.
+        """
         logger.info("Initializing database")
 
         self.db_password = load_pw_file()

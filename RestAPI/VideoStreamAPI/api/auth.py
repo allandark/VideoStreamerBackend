@@ -17,8 +17,6 @@ authorizations = {
 def create_api_auth(app_context):
 
     api: Namespace = Namespace("auth", description="Authentication", authorizations=authorizations)
-
-
     user_request_model = get_user_request_model(api)
 
     @api.route('/login')
@@ -27,7 +25,7 @@ def create_api_auth(app_context):
         @api.expect(user_request_model)
         def post(self):
             # TODO
-            user = app_context.db_context.users.GetAttr("user_name", request.json['name'])
+            # user = app_context.db_context.users.GetAttr("user_name", request.json['name'])
 
             return {"messeage", "status"}, 200
 

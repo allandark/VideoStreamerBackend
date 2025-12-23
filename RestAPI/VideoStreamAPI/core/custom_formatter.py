@@ -1,70 +1,79 @@
 
 import logging
+from flask import Flask
 
+def InitLogger(app : Flask):
+  """_summary_
+  Initializes logger stream for file and std out and hooks it up to 
+  flask and werzeug logger
+  Args:
+      app (Flask): Instance of flask app
+  """
+  logger = app.logger
+  logger.setLevel(logging.DEBUG)
+  logger.handlers.clear()
 
-def InitLogger(app):
-    logger = app.logger
-    logger.setLevel(logging.DEBUG)
-    logger.handlers.clear()
+  ch1 = logging.StreamHandler()
+  ch1.setFormatter(CustomFormatter(colors=True))
+  logger.addHandler(ch1)
 
-    ch1 = logging.StreamHandler()
-    ch1.setFormatter(CustomFormatter(colors=True))
-    logger.addHandler(ch1)
+  ch2 = logging.FileHandler("logs/app.log")
+  ch2.setFormatter(CustomFormatter(colors=False))
+  logger.addHandler(ch2)
 
-    ch2 = logging.FileHandler("logs/app.log")
-    ch2.setFormatter(CustomFormatter(colors=False))
-    logger.addHandler(ch2)
+  werkzeug_logger = logging.getLogger('werkzeug')
+  werkzeug_logger.handlers.clear()
+  werkzeug_logger.addHandler(ch1)
+  werkzeug_logger.setLevel(logging.DEBUG)
 
-    werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.handlers.clear()
-    werkzeug_logger.addHandler(ch1)
-    werkzeug_logger.setLevel(logging.DEBUG)
+  gunicorn_error = logging.getLogger("gunicorn.error")
+  gunicorn_error.handlers.clear()
+  gunicorn_error.addHandler(ch1)
+  gunicorn_error.addHandler(ch2)
+  gunicorn_error.setLevel(logging.DEBUG)
 
-    gunicorn_error = logging.getLogger("gunicorn.error")
-    gunicorn_error.handlers.clear()
-    gunicorn_error.addHandler(ch1)
-    gunicorn_error.addHandler(ch2)
-    gunicorn_error.setLevel(logging.DEBUG)
-
-    gunicorn_access = logging.getLogger("gunicorn.access")
-    gunicorn_access.handlers.clear()
-    gunicorn_access.addHandler(ch1)
-    gunicorn_access.addHandler(ch2)
-    gunicorn_access.setLevel(logging.DEBUG)
-    
-    logging.getLogger().handlers = gunicorn_error.handlers
-    logging.getLogger().setLevel(logging.DEBUG)
-    logging.getLogger().propagate = True
+  gunicorn_access = logging.getLogger("gunicorn.access")
+  gunicorn_access.handlers.clear()
+  gunicorn_access.addHandler(ch1)
+  gunicorn_access.addHandler(ch2)
+  gunicorn_access.setLevel(logging.DEBUG)
+  
+  logging.getLogger().handlers = gunicorn_error.handlers
+  logging.getLogger().setLevel(logging.DEBUG)
+  logging.getLogger().propagate = True
 
 class CustomFormatter(logging.Formatter):
+  """_summary_ 
+  Custom formatter for colorized logger
+  """
     
-    def __init__(self, colors: bool, **kvargs):
-        self.colors = colors
+  def __init__(self, colors: bool, **kvargs):
+      self.colors = colors
 
-    NO_COLOR = -1
+  NO_COLOR = -1
 
-    green = "\x1b[32m"
-    blue = "\x1b[36m"
-    grey = "\x1b[38;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = "[%(asctime)s]:[%(name)s]:[%(levelname)s]: %(message)s (%(filename)s:%(lineno)d)"
+  green = "\x1b[32m"
+  blue = "\x1b[36m"
+  grey = "\x1b[38;20m"
+  yellow = "\x1b[33;20m"
+  red = "\x1b[31;20m"
+  bold_red = "\x1b[31;1m"
+  reset = "\x1b[0m"
+  format = "[%(asctime)s]:[%(name)s]:[%(levelname)s]: %(message)s (%(filename)s:%(lineno)d)"
 
-    FORMATS = {
-        logging.DEBUG: blue + format + reset,
-        logging.INFO: green + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset,
-        NO_COLOR: format
-    }
+  FORMATS = {
+      logging.DEBUG: blue + format + reset,
+      logging.INFO: green + format + reset,
+      logging.WARNING: yellow + format + reset,
+      logging.ERROR: red + format + reset,
+      logging.CRITICAL: bold_red + format + reset,
+      NO_COLOR: format
+  }
 
-    def format(self, record):
-        if self.colors:
-          log_fmt = self.FORMATS.get(record.levelno)
-        else:
-          log_fmt = self.FORMATS.get(self.NO_COLOR)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
+  def format(self, record):
+      if self.colors:
+        log_fmt = self.FORMATS.get(record.levelno)
+      else:
+        log_fmt = self.FORMATS.get(self.NO_COLOR)
+      formatter = logging.Formatter(log_fmt)
+      return formatter.format(record)

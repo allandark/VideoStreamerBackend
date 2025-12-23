@@ -11,13 +11,14 @@ from VideoStreamAPI.core.hls_builder import HLSBuilder
 
 
 class VideoMeta:
+  """ Class holding media info.
+  """
   def __init__(self, input_file: str, output_dir: str):
-    self.input_file = input_file 
-    self.output_dir = output_dir
-    # self.extract_dir = extract_dir
+    self.input_file = input_file  
+    self.output_dir = output_dir 
     filename = str(self.input_file.name).split('.')[0]
+    # this is used for hls builder to store hls files 
     self.output_target_dir = self.output_dir / filename
-    
 
     # Meta data
     self.format = {}
@@ -28,6 +29,11 @@ class VideoMeta:
     self.get_meta_data()
     
   def to_dict(self):
+    """ Returns a dict containing meta info
+
+    Returns:
+        dict: meta info
+    """
     return {
       "format" : self.format,
       "video_tracks": self.video_tracks,
@@ -36,6 +42,8 @@ class VideoMeta:
     }
 
   def get_meta_data(self):
+    """ probes media file and fill out data
+    """
     try:
       logger.debug(f"ffmpeg probe: \"{self.input_file}\"")
       probe = ffmpeg.probe(self.input_file)
@@ -103,16 +111,40 @@ class VideoMeta:
 
 
 class VideoManager:
-  def __init__(self, output_dir, upload_dir):
+  """ Class providing utilities for video/media operations
+  """
+  def __init__(self, output_dir: Path, upload_dir: Path):
+    """ Init video manager
+
+    Args:
+        output_dir (Path): directory for hls video data
+        upload_dir (Path): upload directory
+    """
     self.output_dir = output_dir
     self.upload_dir = upload_dir
 
 
-  def DirExists(self, dir):
+  def DirExists(self, dir: Path):
+    """ Check if directory exists in output directory
+
+    Args:
+        dir (Path): output sub path
+
+    Returns:
+        bool: true if directory exists
+    """
     url = self.output_dir / dir
     return os.path.exists(url)
 
-  def DirRemove(self , dir):
+  def DirRemove(self , dir: Path):
+    """ Remove directory and files recursive
+
+    Args:
+        dir (Path): _description_
+
+    Returns:
+        bool: true if deleted successfully
+    """
     try:
         shutil.rmtree(self.output_dir / dir)      
         logger.info(f"HLS files deleted successfully")      
@@ -121,7 +153,16 @@ class VideoManager:
         logger.error(f"Failed to delete HLS files: {e}")
         return False  
 
-  def CreateHls(self, video_data, video_name, **kwargs):
+  def CreateHls(self, video_data: VideoMeta, video_name: str, **kwargs):
+    """ Run the hls builder tool with params.
+
+    Args:
+        video_data (VideoMeta): video meta data
+        video_name (str): video name
+
+    Returns:
+        dict|False: containing status of build operation or false if failure
+    """
     try:
       
       output_path = self.output_dir / video_name
@@ -180,14 +221,39 @@ class VideoManager:
       logger.error(f"Failed to create HLS data: {e}")
       return False
 
-  def LoadData(self, input_file):
+  def LoadData(self, input_file: Path):
+    """ Load video meta data
+
+    Args:
+        input_file (Path): input file name
+
+    Returns:
+        VideoMeta: video meta data
+    """
     input_dir = self.upload_dir / input_file
     logger.debug(f"Loading video: {input_dir}")
     vid = VideoMeta(input_dir, self.output_dir)
     return vid
 
-  def GetFile(self, video_dir, file_name):
+  def GetFile(self, video_dir: Path, file_name: Path):
+    """ Returns absolute path to file
+
+    Args:
+        video_dir (Path): video directory
+        file_name (Path): file name
+
+    Returns:
+        Path: absolute path
+    """
     return  self.output_dir / video_dir / file_name
 
-  def GetDir(self, video_dir):
+  def GetDir(self, video_dir: Path):
+    """ Returns absolute path to video directory
+
+    Args:
+        video_dir (Path): video directory
+
+    Returns:
+        Path: absolute
+    """
     return self.output_dir / video_dir
