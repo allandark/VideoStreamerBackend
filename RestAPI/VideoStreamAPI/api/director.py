@@ -1,3 +1,4 @@
+from VideoStreamAPI.api.api_models import get_director_model, get_director_request_model
 from flask_restx import Namespace, Resource, fields, Model
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
@@ -5,28 +6,26 @@ from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
 import logging
-logger : logging.Logger = logging.getLogger("app")
-
-from VideoStreamAPI.api.api_models import get_director_model, get_director_request_model
-
+logger: logging.Logger = logging.getLogger("app")
 
 
 jwt = JWTManager()
 
 authorizations = {
-    "jsonWebToken":{
+    "jsonWebToken": {
         "type": "apiKey",
         "in": "header",
         "name": "Authorization"
     }
 }
 
+
 def create_api_director(app_context):
-    api: Namespace = Namespace("director", description="Director", authorizations=authorizations)
+    api: Namespace = Namespace(
+        "director", description="Director", authorizations=authorizations)
 
     director_model = get_director_model(api)
     director_request_model = get_director_request_model(api)
-
 
     @api.route('')
     class Director(Resource):
@@ -43,10 +42,9 @@ def create_api_director(app_context):
         @api.doc('Create new director')
         @api.expect(director_request_model)
         @api.marshal_with(director_model, code=201)
-        def post(self):            
+        def post(self):
             director = app_context.db_context.directors.Create(request.json)
             return director, 200
-
 
     @api.route('/<int:id>')
     class DirectorID(Resource):
@@ -57,7 +55,6 @@ def create_api_director(app_context):
             if director is None:
                 return director, 404
             return director, 200
-
 
         @api.doc('Update director with id')
         @api.expect(director_model)
@@ -80,4 +77,3 @@ def create_api_director(app_context):
             return {"message": "director was deleted"}, 200
 
     return api
-

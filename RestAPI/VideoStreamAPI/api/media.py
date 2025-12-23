@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields, Model
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
-from flask import send_from_directory,request, jsonify
+from flask import send_from_directory, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
@@ -9,59 +9,61 @@ from VideoStreamAPI.api.api_models import get_media_task_model, get_media_task_r
 from VideoStreamAPI.core.media_task import TaskType, TaskStatus
 
 import logging
-logger : logging.Logger = logging.getLogger("app")
+logger: logging.Logger = logging.getLogger("app")
 
 jwt = JWTManager()
 
 authorizations = {
-    "jsonWebToken":{
+    "jsonWebToken": {
         "type": "apiKey",
         "in": "header",
         "name": "Authorization"
     }
 }
 
+
 def create_api_media(app_context):
 
-    api: Namespace = Namespace("media", description="Media endpoint for providing HLS video data", authorizations=authorizations)
+    api: Namespace = Namespace(
+        "media", description="Media endpoint for providing HLS video data", authorizations=authorizations)
 
-    upload_chunk_model = api.model('UploadChunkModel',{
+    upload_chunk_model = api.model('UploadChunkModel', {
         "task_id": fields.String(required=True, description="ID of the upload task"),
         "chunk_index": fields.Integer(required=True),
         "chunk_data": fields.String(required=True, description="Binary file part")
     })
 
-    complete_chunk_model = api.model('CompleteChunkModel',{
-        "task_id" : fields.String(required=True, description="ID of the upload task")
+    complete_chunk_model = api.model('CompleteChunkModel', {
+        "task_id": fields.String(required=True, description="ID of the upload task")
     })
-    
+
     # binary_response = api.schema_model('BinaryFile', {'type': 'string', 'format': 'binary'})
 
     upload_parser = api.parser()
     upload_parser.add_argument('file', location='files',
-                            type=FileStorage, required=True,
-                            help='File to upload')
+                               type=FileStorage, required=True,
+                               help='File to upload')
     upload_parser.add_argument('name', location='form',
-                            type=str, required=True,
-                            help='Video name')
+                               type=str, required=True,
+                               help='Video name')
 
     media_task_model = get_media_task_model(api)
     media_task_request_model = get_media_task_request_model(api)
 
-    media_model = api.model('MediaModel',{
-        'id' : fields.Integer(required=True, description='Primary key'),
-        'name' : fields.String(required=True, description='media name'),
-        'mimetype' : fields.String(required=True, description='media type'),
-        'hash' : fields.String(required=True, description='file sh265-hash'),
+    media_model = api.model('MediaModel', {
+        'id': fields.Integer(required=True, description='Primary key'),
+        'name': fields.String(required=True, description='media name'),
+        'mimetype': fields.String(required=True, description='media type'),
+        'hash': fields.String(required=True, description='file sh265-hash'),
         'master_file': fields.Boolean(required=True),
         'video_tracks': fields.Raw(required=True),
         'audio_tracks': fields.Raw(required=True),
         'subtitle_tracks': fields.Raw(required=True),
-        'tasks' : fields.List(fields.Nested(media_task_model))
+        'tasks': fields.List(fields.Nested(media_task_model))
     })
 
-    media_request_model = api.model('MediaModel',{
-        'name' : fields.String(required=True, description='media name'),
+    media_request_model = api.model('MediaModel', {
+        'name': fields.String(required=True, description='media name'),
     })
 
     @api.route('/task')
@@ -78,8 +80,9 @@ def create_api_media(app_context):
         def post(self):
             media_id = request.json.get('media_id', 0)
             task_type = request.json['task_type']
-            params = request.json.get('params',{})
-            logger.debug(f"media_id: {media_id}, task: {task_type}, params: {params}")
+            params = request.json.get('params', {})
+            logger.debug(
+                f"media_id: {media_id}, task: {task_type}, params: {params}")
 
             queue = False if task_type == TaskType.FILE_REASSEMBLY else True
             task = app_context.media_manager.AddOrUpdateTask(
@@ -87,11 +90,10 @@ def create_api_media(app_context):
                 media_id=media_id,
                 queue_task=queue,
                 **params
-                )
+            )
             if task is None:
                 return task, 400
             return task, 201
-            
 
     @api.route('/task/<int:id>')
     class Task(Resource):
@@ -118,9 +120,9 @@ def create_api_media(app_context):
 
     #     @api.doc(
     #         description='Download media file',
-    #         responses={200: ('File downloaded', binary_response)})   
+    #         responses={200: ('File downloaded', binary_response)})
     #     @api.produces(['application/octet-stream'])
-    #     def get(self, id):            
+    #     def get(self, id):
     #         meta_data = app_context.db_context.media.Get(id)
     #         if meta_data is None:
     #             return None, 400
@@ -133,7 +135,7 @@ def create_api_media(app_context):
         @api.marshal_list_with(media_model, code=200)
         def get(self):
             return app_context.db_context.media.GetAll()
-        
+
     @api.route('/<int:id>')
     class MediaId(Resource):
         @api.doc('Get all media files meta data')
@@ -143,7 +145,7 @@ def create_api_media(app_context):
             if media is None:
                 return None, 404
             return media
-        
+
         @api.doc(description="Delete media by id from database")
         def delete(self, id):
             media = app_context.db_context.media.Get(id)
@@ -154,18 +156,18 @@ def create_api_media(app_context):
                 return {"error": "could not delete media"}, 500
             return {"message": "media deleted successfully"}, 200
 
-
     @api.route('/meta/<int:id>')
     class MediaMetaId(Resource):
-        @api.doc('Get FFMPEG video meta data for media with id')        
+        @api.doc('Get FFMPEG video meta data for media with id')
         def get(self, id):
             media = app_context.db_context.media.Get(id)
             if media is None:
                 return None, 404
-            file_name = app_context.media_manager.uploader.GetFileName(media['hash'], media['mimetype'])  
-            meta_data = app_context.media_manager.video_manager.LoadData(file_name)
+            file_name = app_context.media_manager.uploader.GetFileName(
+                media['hash'], media['mimetype'])
+            meta_data = app_context.media_manager.video_manager.LoadData(
+                file_name)
             return meta_data.to_dict(), 200
-            
 
     @api.route('/upload/chunk_complete')
     class UploadChunkComplete(Resource):
@@ -179,12 +181,12 @@ def create_api_media(app_context):
             if len(task["params"]["received_chunks"]) != task["params"]["chunk_count"]:
                 logger.error(f"not all chunks uploaded")
                 return {"error": "Not all chunks uploaded"}, 400
-            
+
             app_context.media_manager.AddOrUpdateTask(
-                type= task['task_type'],
-                media_id = task['media_id'],
-                task_id = task_id,
-                queue_task = True                
+                type=task['task_type'],
+                media_id=task['media_id'],
+                task_id=task_id,
+                queue_task=True
             )
 
     @api.route('/upload/chunk_upload')
@@ -203,15 +205,16 @@ def create_api_media(app_context):
             if task['status'] != TaskStatus.PENDING:
                 logger.warning(f"Cannot upload chunks without a valid task")
                 return None, 400
-            
-            app_context.media_manager.uploader.ChunkSave(task_id, chunk_index, chunk_file)
+
+            app_context.media_manager.uploader.ChunkSave(
+                task_id, chunk_index, chunk_file)
             task['params']['received_chunks'][chunk_index] = True
             app_context.media_manager.AddOrUpdateTask(
-                type= task['task_type'],
-                media_id = task['media_id'],
-                task_id = task_id,
-                queue_task = False,
-                **task['params']                               
+                type=task['task_type'],
+                media_id=task['media_id'],
+                task_id=task_id,
+                queue_task=False,
+                **task['params']
             )
             return task, 200
 
@@ -230,20 +233,21 @@ def create_api_media(app_context):
                 return None, 400
             if filename is None:
                 return None, 400
-            filename = secure_filename(filename)    
+            filename = secure_filename(filename)
 
             # Check for dublicate and save
             media = app_context.db_context.media.GetAttr("name", filename)
             if media:
                 return None, 400
-            res = app_context.media_manager.uploader.FileSave(file=file, filename=filename)     
+            res = app_context.media_manager.uploader.FileSave(
+                file=file, filename=filename)
             if not res:
                 return None, 400
-            
+
             media = app_context.db_context.media.Create({
-                "hash" : res['hash'],
-                "mimetype" : res['type'],
-                "name" : res['file_name']
+                "hash": res['hash'],
+                "mimetype": res['type'],
+                "name": res['file_name']
             })
             return media, 201
 
@@ -256,20 +260,20 @@ def create_api_media(app_context):
             media = app_context.db_context.media.Get(media_id)
             if media is None:
                 return {"error": "media not found"}, 404
-            dir = app_context.media_manager.video_manager.GetDir(media['hash'])                
+            dir = app_context.media_manager.video_manager.GetDir(media['hash'])
             return send_from_directory(dir, "out_thumbnail.png", mimetype='image/png')
-                
+
     @api.route('/hls/playlist/<int:media_id>')
     class HlsPlaylist(Resource):
         ''' Request master HLS playlist file
         '''
         @api.doc('Get HLS playlist master file')
         def get(self, media_id):
-            
+
             media = app_context.db_context.media.Get(media_id)
             if media is None:
-                return {"error": "file not found"}, 404  
-        
+                return {"error": "file not found"}, 404
+
             dir = app_context.media_manager.video_manager.GetDir(media['hash'])
             return send_from_directory(dir,  "out_master.m3u8", mimetype='application/vnd.apple.mpegurl')
 
@@ -289,7 +293,7 @@ def create_api_media(app_context):
     class HlsChunk(Resource):
         ''' Request Hls chunk data
         '''
-        @api.doc('Get video chunk from video_name with chunk_id file name. Chunk id ex: ')          
+        @api.doc('Get video chunk from video_name with chunk_id file name. Chunk id ex: ')
         def get(self, media_id, file_name):
             media = app_context.db_context.media.Get(media_id)
             if media is None:

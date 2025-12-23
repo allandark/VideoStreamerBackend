@@ -1,30 +1,30 @@
+from VideoStreamAPI.api.api_models import get_star_model, get_star_request_model
 from flask_restx import Namespace, Resource, fields, Model
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import logging
-logger : logging.Logger = logging.getLogger("app")
-
-from VideoStreamAPI.api.api_models import get_star_model, get_star_request_model
+logger: logging.Logger = logging.getLogger("app")
 
 
 jwt = JWTManager()
 
 authorizations = {
-    "jsonWebToken":{
+    "jsonWebToken": {
         "type": "apiKey",
         "in": "header",
         "name": "Authorization"
     }
 }
 
+
 def create_api_star(app_context):
-    api: Namespace = Namespace("star", description="Stars/actor/actresses", authorizations=authorizations)
+    api: Namespace = Namespace(
+        "star", description="Stars/actor/actresses", authorizations=authorizations)
 
     star_model = get_star_model(api)
     star_request_model = get_star_request_model(api)
-
 
     @api.route('')
     class Star(Resource):
@@ -41,10 +41,9 @@ def create_api_star(app_context):
         @api.doc('Create new star')
         @api.expect(star_request_model)
         @api.marshal_with(star_model, code=201)
-        def post(self):            
+        def post(self):
             star = app_context.db_context.stars.Create(request.json)
             return star, 200
-
 
     @api.route('/<int:id>')
     class StarID(Resource):
@@ -55,7 +54,6 @@ def create_api_star(app_context):
             if star is None:
                 return star, 404
             return star, 200
-
 
         @api.doc('Update star with id')
         @api.expect(star_model)
@@ -78,4 +76,3 @@ def create_api_star(app_context):
             return {"message": "star was deleted"}, 200
 
     return api
-

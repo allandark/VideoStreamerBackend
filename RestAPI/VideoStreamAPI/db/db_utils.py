@@ -1,7 +1,7 @@
 import datetime
 from logging import Logger
 import logging
-logger : Logger = logging.getLogger("app")
+logger: Logger = logging.getLogger("app")
 
 
 def model_to_dict(obj, include_relationships=False, session=None, visited=None):
@@ -24,7 +24,7 @@ def model_to_dict(obj, include_relationships=False, session=None, visited=None):
 
     result = {}
     for c in obj.__table__.columns:
-        val = getattr(obj, c.key)  
+        val = getattr(obj, c.key)
         result[c.key] = val
 
     # Relationships
@@ -38,11 +38,14 @@ def model_to_dict(obj, include_relationships=False, session=None, visited=None):
             if val is None:
                 result[rel.key] = None
             elif rel.uselist:
-                result[rel.key] = [model_to_dict(v, include_relationships=False, session=session, visited=visited) for v in val]
+                result[rel.key] = [model_to_dict(
+                    v, include_relationships=False, session=session, visited=visited) for v in val]
             else:
-                result[rel.key] = model_to_dict(val, include_relationships=False, session=session, visited=visited)
+                result[rel.key] = model_to_dict(
+                    val, include_relationships=False, session=session, visited=visited)
 
     return result
+
 
 def from_dict(obj, data: dict, session, visited=None, include_relationships=True):
     """ Creates a sql alchemy model from a dict
@@ -64,9 +67,9 @@ def from_dict(obj, data: dict, session, visited=None, include_relationships=True
         return obj
     visited.add(id(obj))
 
-    for col in obj.__table__.columns:    
-        if col.key in data:  
-            value = data[col.key]          
+    for col in obj.__table__.columns:
+        if col.key in data:
+            value = data[col.key]
             if hasattr(col.type, "python_type"):
                 py_type = col.type.python_type
                 if py_type is datetime.datetime:
@@ -94,7 +97,8 @@ def from_dict(obj, data: dict, session, visited=None, include_relationships=True
                             existing = None
                             if "id" in item:
                                 existing = session.get(related_cls, item["id"])
-                            related_obj = from_dict(existing or related_cls(), item, session, visited)
+                            related_obj = from_dict(
+                                existing or related_cls(), item, session, visited)
                             session.add(related_obj)
                             related_objs.append(related_obj)
                         else:
@@ -109,7 +113,8 @@ def from_dict(obj, data: dict, session, visited=None, include_relationships=True
                     existing = None
                     if "id" in val:
                         existing = session.get(related_cls, val["id"])
-                    related_obj = from_dict(existing or related_cls(), val, session, visited)
+                    related_obj = from_dict(
+                        existing or related_cls(), val, session, visited)
                     session.add(related_obj)
                     setattr(obj, rel.key, related_obj)
                 else:

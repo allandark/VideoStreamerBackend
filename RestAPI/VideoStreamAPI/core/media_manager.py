@@ -1,21 +1,19 @@
+from VideoStreamAPI.db.db_context import DatabaseContext
+from VideoStreamAPI.core.video_manager import VideoManager
+from VideoStreamAPI.core.upload_manager import UploadManager
+from VideoStreamAPI.core.media_task import TaskStatus, ITask, TaskType
 from pathlib import Path
 import threading
 from threading import Thread
 from queue import Queue
 
 import logging
-logger : logging.Logger = logging.getLogger("app")
-
-from VideoStreamAPI.core.media_task import TaskStatus, ITask, TaskType
-from VideoStreamAPI.core.upload_manager import UploadManager
-from VideoStreamAPI.core.video_manager import VideoManager
-from VideoStreamAPI.db.db_context import DatabaseContext
-
+logger: logging.Logger = logging.getLogger("app")
 
 
 class MediaManager:
 
-    def __init__(self, abs_video_dir: str = "", db: DatabaseContext|None = None):
+    def __init__(self, abs_video_dir: str = "", db: DatabaseContext | None = None):
         """ _summary_\n
         Manager class for providing media utilities for saving, deleting and synchronizing
         media files. It offloads computation intensive task to another thread.
@@ -29,20 +27,22 @@ class MediaManager:
         self.upload_dir: Path = Path(abs_video_dir) / "uploads"
         self.temp_dir: Path = self.upload_dir / "tmp"
 
-        self.uploader: UploadManager = UploadManager(self.upload_dir, self.temp_dir)
-        self.video_manager: VideoManager = VideoManager(self.output_dir, self.upload_dir)
+        self.uploader: UploadManager = UploadManager(
+            self.upload_dir, self.temp_dir)
+        self.video_manager: VideoManager = VideoManager(
+            self.output_dir, self.upload_dir)
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
-        
 
         self.db: DatabaseContext = db
         self.queue: Queue = Queue()
-        self.thread: Thread = threading.Thread(target=self._worker, daemon=True)
+        self.thread: Thread = threading.Thread(
+            target=self._worker, daemon=True)
         self.thread.start()
 
-    def AddOrUpdateTask(self, type: TaskType, media_id: int, task_id: int|None=None, queue_task: bool=True, **kwargs ):
+    def AddOrUpdateTask(self, type: TaskType, media_id: int, task_id: int | None = None, queue_task: bool = True, **kwargs):
         """ _summary_\n
         Creates a new task or updates an existing task.
         Args:
@@ -55,39 +55,36 @@ class MediaManager:
             _type_: _description_
         """
         task = ITask.CreateTask(
-            type = type,
-            media_id = media_id, 
-            params = kwargs,
-            db = self.db,
-            video_manager = self.video_manager,
-            uploader = self.uploader,
-            task_id = task_id
-        )  
+            type=type,
+            media_id=media_id,
+            params=kwargs,
+            db=self.db,
+            video_manager=self.video_manager,
+            uploader=self.uploader,
+            task_id=task_id
+        )
         if task is None:
             logger.error(f"Failed to  create task: {type}")
 
         if task_id is None:
             logger.debug(f"starting task: {task_id}")
-            if not task.Start():                    
+            if not task.Start():
                 queue_task = False
-                
+
             if task is not None and task.status == TaskStatus.ERROR:
                 logger.error(f"Failed to create media task")
-                return None     
-        else:   
-            task.Update(params = kwargs)
+                return None
+        else:
+            task.Update(params=kwargs)
 
         if queue_task:
-            logger.debug(f"Queuing Media task: {task}")            
+            logger.debug(f"Queuing Media task: {task}")
             self.queue.put(task)
-        
+
         return task.data
-  
 
     def _worker(self):
 
         while True:
             task = self.queue.get()
             task.Execute()
-
-

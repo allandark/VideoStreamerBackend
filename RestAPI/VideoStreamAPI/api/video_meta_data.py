@@ -1,3 +1,5 @@
+from VideoStreamAPI.api.api_models import get_director_model, get_genre_model, get_star_model, get_series_model, get_video_request_parser
+from VideoStreamAPI.api.api_models import get_video_meta_data_request_model, get_video_meta_response_model
 from flask_restx import Namespace, Resource, fields, Model
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
@@ -5,23 +7,23 @@ from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import logging
-logger : logging.Logger = logging.getLogger("app")
+logger: logging.Logger = logging.getLogger("app")
 
-from VideoStreamAPI.api.api_models import get_video_meta_data_request_model, get_video_meta_response_model
-from VideoStreamAPI.api.api_models import get_director_model, get_genre_model, get_star_model, get_series_model, get_video_request_parser
 
 jwt = JWTManager()
 
 authorizations = {
-    "jsonWebToken":{
+    "jsonWebToken": {
         "type": "apiKey",
         "in": "header",
         "name": "Authorization"
     }
 }
 
+
 def create_api_video_meta(app_context):
-    api: Namespace = Namespace("video_meta", description="Video Meta data endpoint for database tracking of videos", authorizations=authorizations)
+    api: Namespace = Namespace(
+        "video_meta", description="Video Meta data endpoint for database tracking of videos", authorizations=authorizations)
 
     # Models
     star_model = get_star_model(api=api, include_relationship=False)
@@ -34,7 +36,6 @@ def create_api_video_meta(app_context):
     # Parsers
     request_parser = get_video_request_parser(api)
 
-
     @api.route('')
     class VideoMeta(Resource):
 
@@ -45,7 +46,7 @@ def create_api_video_meta(app_context):
         def get(self):
             args = request_parser.parse_args()
             videos = app_context.db_context.videos.GetAll(args)
-       
+
             return videos
 
         @api.doc('Create new video meta data')
@@ -60,18 +61,20 @@ def create_api_video_meta(app_context):
 
             if not app_context.media_manager.uploader.FileExists(media['hash'], media['mimetype']):
                 return media, 400
-     
-            file_name =  app_context.media_manager.uploader.GetFileName(media['hash'], media['mimetype'])
-            meta_data = app_context.media_manager.video_manager.LoadData(file_name)
-            
+
+            file_name = app_context.media_manager.uploader.GetFileName(
+                media['hash'], media['mimetype'])
+            meta_data = app_context.media_manager.video_manager.LoadData(
+                file_name)
+
             upload_date = datetime.now().isoformat()
             data = {
-                'title': request.json['title'],                                                
-                'description': request.json['description'],                
-                'duration_seconds': meta_data.format['duration'],                       
-                'views': 0,                
-                'rating': request.json['rating'],                                                
-                'upload_date' : upload_date,                     
+                'title': request.json['title'],
+                'description': request.json['description'],
+                'duration_seconds': meta_data.format['duration'],
+                'views': 0,
+                'rating': request.json['rating'],
+                'upload_date': upload_date,
                 'media_id': media_id,
                 'stars': request.json['stars'],
                 'genres': request.json['genres'],
@@ -83,7 +86,6 @@ def create_api_video_meta(app_context):
 
             return video, 200
 
-
     @api.route('/<int:id>')
     class VideoMetaID(Resource):
         @api.doc('Get video meta data by id')
@@ -94,7 +96,6 @@ def create_api_video_meta(app_context):
                 return video, 404
 
             return video, 200
-
 
         @api.doc('Update video meta data with id')
         @api.expect(video_meta_response_model)
@@ -121,4 +122,3 @@ def create_api_video_meta(app_context):
             return {"message": "video meta data deleted"}, 200
 
     return api
-

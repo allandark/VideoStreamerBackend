@@ -7,16 +7,18 @@ from VideoStreamAPI.api.api_models import get_user_request_model
 jwt = JWTManager()
 
 authorizations = {
-    "jsonWebToken":{
+    "jsonWebToken": {
         "type": "apiKey",
         "in": "header",
         "name": "Authorization"
     }
 }
 
+
 def create_api_auth(app_context):
 
-    api: Namespace = Namespace("auth", description="Authentication", authorizations=authorizations)
+    api: Namespace = Namespace(
+        "auth", description="Authentication", authorizations=authorizations)
     user_request_model = get_user_request_model(api)
 
     @api.route('/login')
@@ -28,6 +30,5 @@ def create_api_auth(app_context):
             # user = app_context.db_context.users.GetAttr("user_name", request.json['name'])
 
             return {"messeage", "status"}, 200
-
 
     return api

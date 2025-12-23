@@ -1,31 +1,30 @@
+from VideoStreamAPI.api.api_models import get_user_model, get_user_request_model
 from flask_restx import Namespace, Resource, fields, Model
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import logging
-logger : logging.Logger = logging.getLogger("app")
-
-from VideoStreamAPI.api.api_models import get_user_model, get_user_request_model
-
+logger: logging.Logger = logging.getLogger("app")
 
 
 jwt = JWTManager()
 
 authorizations = {
-    "jsonWebToken":{
+    "jsonWebToken": {
         "type": "apiKey",
         "in": "header",
         "name": "Authorization"
     }
 }
 
+
 def create_api_user(app_context):
-    api: Namespace = Namespace("user", description="User", authorizations=authorizations)
+    api: Namespace = Namespace(
+        "user", description="User", authorizations=authorizations)
 
     user_model = get_user_model(api)
     user_request_model = get_user_request_model(api)
-
 
     @api.route('')
     class User(Resource):
@@ -37,7 +36,6 @@ def create_api_user(app_context):
         def get(self):
             # args = request_parser.parse_args()
             users = app_context.db_context.users.GetAll()
-            
 
             return users
 
@@ -45,10 +43,9 @@ def create_api_user(app_context):
         @api.expect(user_request_model)
         @api.marshal_with(user_model, code=201)
         def post(self):
-            
+
             user = app_context.db_context.users.Create(request.json)
             return user, 200
-
 
     @api.route('/<int:id>')
     class UserID(Resource):
@@ -59,7 +56,6 @@ def create_api_user(app_context):
             if user is None:
                 return user, 404
             return user, 200
-
 
         @api.doc('Update user with id')
         @api.expect(user_model)
@@ -82,4 +78,3 @@ def create_api_user(app_context):
             return {"message": "user was deleted"}, 200
 
     return api
-

@@ -1,32 +1,30 @@
+from VideoStreamAPI.api.api_models import get_series_model, get_series_request_model
 from flask_restx import Namespace, Resource, fields, Model
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import logging
-logger : logging.Logger = logging.getLogger("app")
-
-
-from VideoStreamAPI.api.api_models import get_series_model, get_series_request_model
-
+logger: logging.Logger = logging.getLogger("app")
 
 
 jwt = JWTManager()
 
 authorizations = {
-    "jsonWebToken":{
+    "jsonWebToken": {
         "type": "apiKey",
         "in": "header",
         "name": "Authorization"
     }
 }
 
+
 def create_api_series(app_context):
-    api: Namespace = Namespace("series", description="Video series", authorizations=authorizations)
+    api: Namespace = Namespace(
+        "series", description="Video series", authorizations=authorizations)
 
     series_model = get_series_model(api)
     series_request_model = get_series_request_model(api)
-
 
     @api.route('')
     class Series(Resource):
@@ -43,10 +41,9 @@ def create_api_series(app_context):
         @api.doc('Create new series')
         @api.expect(series_request_model)
         @api.marshal_with(series_model, code=201)
-        def post(self):            
+        def post(self):
             series = app_context.db_context.series.Create(request.json)
             return series, 200
-
 
     @api.route('/<int:id>')
     class SeriesID(Resource):
@@ -57,7 +54,6 @@ def create_api_series(app_context):
             if series is None:
                 return series, 404
             return series, 200
-
 
         @api.doc('Update series with id')
         @api.expect(series_model)
@@ -80,4 +76,3 @@ def create_api_series(app_context):
             return {"message": "series was deleted"}, 200
 
     return api
-

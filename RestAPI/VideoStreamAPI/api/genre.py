@@ -1,3 +1,4 @@
+from VideoStreamAPI.api.api_models import get_genre_model, get_genre_request_model
 from flask_restx import Namespace, Resource, fields, Model
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
@@ -6,28 +7,26 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from datetime import datetime, date
 import logging
-logger : logging.Logger = logging.getLogger("app")
-
-from VideoStreamAPI.api.api_models import get_genre_model, get_genre_request_model
-
+logger: logging.Logger = logging.getLogger("app")
 
 
 jwt = JWTManager()
 
 authorizations = {
-    "jsonWebToken":{
+    "jsonWebToken": {
         "type": "apiKey",
         "in": "header",
         "name": "Authorization"
     }
 }
 
+
 def create_api_genre(app_context):
-    api: Namespace = Namespace("genre", description="Video Genre", authorizations=authorizations)
+    api: Namespace = Namespace(
+        "genre", description="Video Genre", authorizations=authorizations)
 
     genre_model = get_genre_model(api)
     genre_request_model = get_genre_request_model(api)
-
 
     @api.route('')
     class Genre(Resource):
@@ -45,11 +44,10 @@ def create_api_genre(app_context):
         @api.expect(genre_request_model)
         @api.marshal_with(genre_model, code=201)
         def post(self):
-            
+
             genre = app_context.db_context.genres.Create(request.json)
 
             return genre, 200
-
 
     @api.route('/<int:id>')
     class GenreID(Resource):
@@ -60,7 +58,6 @@ def create_api_genre(app_context):
             if genre is None:
                 return genre, 404
             return genre, 200
-
 
         @api.doc('Update genre with id')
         @api.expect(genre_model)
@@ -83,4 +80,3 @@ def create_api_genre(app_context):
             return {"message": "genre was deleted"}, 200
 
     return api
-

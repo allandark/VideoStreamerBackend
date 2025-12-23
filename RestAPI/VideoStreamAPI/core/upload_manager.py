@@ -5,14 +5,14 @@ import logging
 from io import BytesIO
 from typing import Optional
 from werkzeug.datastructures import FileStorage
-logger : logging.Logger = logging.getLogger("app")
+logger: logging.Logger = logging.getLogger("app")
 
 
 class UploadManager:
     """ Class providing upload utilities and file handling
     """
 
-    def __init__(self, upload_dir : Path, temp_dir: Path):
+    def __init__(self, upload_dir: Path, temp_dir: Path):
         """
 
         Args:
@@ -23,7 +23,6 @@ class UploadManager:
         self.temp_dir = temp_dir
 
         self.stored_files = {}
-
 
     def ChunkCreateDir(self, task_id: int):
         """ Create a temp dir for chunked uploads
@@ -38,7 +37,7 @@ class UploadManager:
         path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def ChunkSave(self, task_id: int, chunk_index: int,  file : FileStorage):
+    def ChunkSave(self, task_id: int, chunk_index: int,  file: FileStorage):
         """ Save chunk/segment of file
 
         Args:
@@ -59,7 +58,7 @@ class UploadManager:
             logger.error(f"Failed to save chunk file: {e}")
             return None
 
-    def ChunkAssemble(self, task_id: int, mimetype : str ,output_file: Optional[str] = None):
+    def ChunkAssemble(self, task_id: int, mimetype: str, output_file: Optional[str] = None):
         """ Assemble chunks to complete file. Calculate hash of blob. Move file to upload folder.
 
         Args:
@@ -73,10 +72,11 @@ class UploadManager:
         task_dir = self.temp_dir / str(task_id)
         if not task_dir.exists():
             return None
-        
-        if output_file is None:            
+
+        if output_file is None:
             output_file = task_dir / f"{task_id}_assembled"
-            logger.warning(f"No output file provided using defualt: {output_file}")
+            logger.warning(
+                f"No output file provided using defualt: {output_file}")
         else:
             output_file = Path(output_file)
 
@@ -85,17 +85,15 @@ class UploadManager:
             with open(output_file, "wb") as out_f:
                 for chunk_file in chunk_files:
                     with open(chunk_file, "rb") as cf:
-                        out_f.write(cf.read())                
+                        out_f.write(cf.read())
             logger.info(f"Chunk files assembled: {output_file}")
 
             with open(output_file, "rb") as in_f:
                 file_hash = self.GetHash(in_f)
 
-            
-            path = self.upload_dir / self.GetFileName(file_hash, mimetype)            
+            path = self.upload_dir / self.GetFileName(file_hash, mimetype)
             logger.debug(f"Renameing file: {path}")
             os.rename(output_file, path)
-
 
             logger.debug(f"Deleteing chunk files")
             for chunk_file in chunk_files:
@@ -142,14 +140,14 @@ class UploadManager:
                 if not data:
                     break
                 h.update(data)
-            hash = h.hexdigest()    
-            file.seek(0)        
+            hash = h.hexdigest()
+            file.seek(0)
             return hash
         except Exception as e:
             logger.warning(f"Error when generating hash: {e}")
             return None
 
-    def GetFileExt(self, mimetype : str):
+    def GetFileExt(self, mimetype: str):
         """ Returns file extention from mimetype
 
         Args:
@@ -159,10 +157,9 @@ class UploadManager:
             str: extention
         """
         file_ext = mimetype.split('/')[1]
-        return  f"{file_ext}"
+        return f"{file_ext}"
 
-
-    def GetFileUrl(self, hash : str, mimetype: str):
+    def GetFileUrl(self, hash: str, mimetype: str):
         """ Returns absolute path to file
 
         Args:
@@ -175,7 +172,7 @@ class UploadManager:
         file_path = self.upload_dir / self.GetFileName(hash, mimetype)
         return str(file_path)
 
-    def GetFileName(self , hash: str, mimetype: str):
+    def GetFileName(self, hash: str, mimetype: str):
         """ Builds filename from hash and type.
 
         Args:
@@ -186,7 +183,6 @@ class UploadManager:
             str: file name
         """
         return str(f"{hash}.{self.GetFileExt(mimetype)}")
-
 
     def FileExists(self, hash: str, mimetype: str):
         """ Checks whether the file exists
@@ -220,7 +216,7 @@ class UploadManager:
             logger.error(f"Failed to delete: {e}")
             return False
 
-    def FileSave(self, file : FileStorage, filename : str):
+    def FileSave(self, file: FileStorage, filename: str):
         """ Save file to upload directory
 
         Args:
@@ -230,17 +226,16 @@ class UploadManager:
         Returns:
             dict: file data: hash, file_name and mimetype
         """
-        try:            
+        try:
 
             file_hash = self.GetHash(file.stream)
             mimetype = file.mimetype
             file_path = self.upload_dir / self.GetFileName(hash, mimetype)
-            
+
             file.save(dst=file_path)
-            res = {"hash": file_hash ,"file_name": filename, "type": mimetype}
+            res = {"hash": file_hash, "file_name": filename, "type": mimetype}
             return res
 
         except Exception as e:
             logger.error(f"Failed to save file \"{filename}\". Error: {e}")
             return None
-        
